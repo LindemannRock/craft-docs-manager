@@ -1,0 +1,57 @@
+{% extends "_layouts/cp" %}
+
+{% set title = title ?? 'Settings'|t('docs-manager') %}
+{% set selectedSettingsItem = selectedSettingsItem ?? 'general' %}
+{% set selectedSubnavItem = 'settings' %}
+
+{% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
+{% set errorSummary = '' %}
+{% if settings is defined and settings.hasErrors() %}
+    {% set errorSummary = include('lindemannrock-base/_partials/error-summary', {
+        errors: settings.getErrors(),
+        linkMode: 'field-id',
+        translationCategory: 'docs-manager'
+    })|trim %}
+{% endif %}
+
+{% block sidebar %}
+    <nav id="settings-nav">
+        <ul>
+            <li>
+                <a href="{{ url('docs-manager/settings/general') }}" {% if selectedSettingsItem == 'general' %}class="sel"{% endif %}>
+                    {{ 'General'|t('docs-manager') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url('docs-manager/settings/frontend') }}" {% if selectedSettingsItem == 'frontend' %}class="sel"{% endif %}>
+                    {{ 'Frontend'|t('docs-manager') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url('docs-manager/settings/interface') }}" {% if selectedSettingsItem == 'interface' %}class="sel"{% endif %}>
+                    {{ 'Interface'|t('docs-manager') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url('docs-manager/settings/advanced') }}" {% if selectedSettingsItem == 'advanced' %}class="sel"{% endif %}>
+                    {{ 'Advanced'|t('docs-manager') }}
+                </a>
+            </li>
+            <li>
+                <a href="{{ url('docs-manager/settings/field-layout') }}" {% if selectedSettingsItem == 'field-layout' %}class="sel"{% endif %}>
+                    {{ 'Page Field Layout'|t('docs-manager') }}
+                </a>
+            </li>
+        </ul>
+    </nav>
+{% endblock %}
+
+{% css %}
+    #settings-nav a {
+        transition: none;
+    }
+
+    #settings-nav a.sel {
+        cursor: default;
+    }
+{% endcss %}

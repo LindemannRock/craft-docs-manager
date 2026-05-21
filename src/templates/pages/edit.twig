@@ -1,0 +1,202 @@
+{% extends '_layouts/cp' %}
+{% import '_includes/forms.twig' as forms %}
+
+{% set pluginInstance = craft.app.plugins.getPlugin('docs-manager') %}
+{% set selectedSubnavItem = 'pages' %}
+
+{% set title = isNew ? 'New Page'|t('docs-manager') : page.title %}
+{% set fullPageForm = true %}
+{% set saveShortcutRedirect = 'docs-manager/pages/{id}' %}
+
+{# Site crumb for multi-site #}
+{% set crumbs = [] %}
+{% if craft.app.getIsMultiSite() %}
+    {% set currentSite = craft.app.sites.getSiteById(page.siteId ?? craft.app.sites.currentSite.id) %}
+
+    {% set siteMenuItems = [] %}
+    {% for site in pluginInstance.getEnabledSites() %}
+        {% set siteMenuItems = siteMenuItems|merge([{
+            label: site.name,
+            url: page.id ? url('docs-manager/pages/' ~ page.id, {site: site.handle}) : url('docs-manager/pages/new/' ~ sourceRecord.id, {site: site.handle}),
+            selected: site.id == (page.siteId ?? craft.app.sites.currentSite.id)
+        }]) %}
+    {% endfor %}
+
+    {% set crumbs = [{
+        id: 'site-crumb',
+        icon: 'world',
+        label: currentSite.name|t('site'),
+        menu: {
+            items: siteMenuItems,
+            label: 'Select site'|t('app')
+        }
+    }] %}
+{% endif %}
+
+{% set crumbs = crumbs|merge([
+    { label: pluginInstance.settings.pluginName, url: url('docs-manager') },
+    { label: 'Pages'|t('docs-manager'), url: url('docs-manager/pages') },
+    { label: sourceRecord.name, url: url('docs-manager/pages', { sourceId: sourceRecord.id }) },
+    { label: isNew ? 'New Page'|t('docs-manager') : page.title },
+]) %}
+
+{% set fieldLayout = page.getFieldLayout() %}
+
+{% set existingPageTypes = existingPageTypes ?? [] %}
+{% set currentType = page.pageType ?? null %}
+{% set pageTypeOptions = [
+    { label: 'Features'|t('docs-manager'), value: 'features', disabled: 'features' in existingPageTypes and 'features' != currentType },
+    { label: 'FAQ'|t('docs-manager'), value: 'faq', disabled: 'faq' in existingPageTypes and 'faq' != currentType },
+    { label: 'Support'|t('docs-manager'), value: 'support', disabled: 'support' in existingPageTypes and 'support' != currentType },
+    { label: 'Pricing'|t('docs-manager'), value: 'pricing', disabled: 'pricing' in existingPageTypes and 'pricing' != currentType },
+    { label: 'Custom'|t('docs-manager'), value: 'custom' },
+] %}
+
+{% block actionButton %}
+    <div class="btngroup submit">
+        <button type="submit" class="btn submit">{{ 'Save'|t('app') }}</button>
+        <button type="button" class="btn submit menubtn"></button>
+        <div class="menu">
+            <ul role="listbox">
+                <li>
+                    <a class="formsubmit" role="option" tabindex="0" data-redirect="{{ url('docs-manager/pages/{id}')|hash }}">
+                        <span class="label">{{ 'Save and continue editing'|t('app') }}</span>
+                        <span class="shortcut" id="save-shortcut"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    {% if page.id and currentUser.can('docsManager:deletePages') %}
+        <button type="button" id="action-btn" class="btn menubtn action-btn hairline-dark m" title="{{ 'Actions'|t('app') }}" aria-controls="action-menu" aria-label="{{ 'Actions'|t('app') }}" data-disclosure-trigger="true" aria-expanded="false"></button>
+        <div id="action-menu" class="menu menu--disclosure">
+            <ul>
+                <li>
+                    <button class="menu-item error formsubmit" data-destructive data-action="docs-manager/pages/delete" data-params='{"pageId":{{ page.id }}}' data-confirm="{{ 'Are you sure you want to delete this page?'|t('docs-manager') }}" data-redirect="{{ ('docs-manager/pages?sourceId=' ~ sourceRecord.id)|hash }}" data-headers='{"Accept":"application/json"}'>
+                        <span class="icon">{{ svg('@app/icons/trash.svg') }}</span>
+                        <span class="menu-item-label">{{ 'Delete'|t('app') }}</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ actionInput('docs-manager/pages/save') }}
+    {{ redirectInput('docs-manager/pages?sourceId=' ~ sourceRecord.id) }}
+    {{ hiddenInput('sourceId', sourceRecord.id) }}
+    {% if page.id %}
+        {{ hiddenInput('pageId', page.id) }}
+    {% endif %}
+
+    {% if page.hasErrors() %}
+        {{ include('lindemannrock-base/_partials/error-summary', {
+            errors: page.getErrors(),
+            linkMode: 'field-id',
+            translationCategory: 'docs-manager'
+        }) }}
+    {% endif %}
+
+    {{ forms.textField({
+        label: 'Title'|t('app'),
+        id: 'title',
+        name: 'title',
+        value: page.title,
+        errors: page.getErrors('title'),
+        first: true,
+        autofocus: true,
+        required: true,
+    }) }}
+
+    {{ forms.textField({
+        label: 'Slug'|t('docs-manager'),
+        instructions: 'URL-friendly identifier for this page.'|t('docs-manager'),
+        id: 'slug',
+        name: 'slug',
+        value: page.slug,
+        errors: page.getErrors('slug'),
+        required: true,
+    }) }}
+
+    {% if fieldLayout %}
+        {% for tab in fieldLayout.getTabs() %}
+            {% if tab.getElements()|length %}
+                <hr>
+                <h2>{{ tab.name }}</h2>
+                {% for element in tab.getElements() %}
+                    {{ element.formHtml(page)|raw }}
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endblock %}
+
+{% block details %}
+    <div class="meta">
+        {{ forms.lightswitchField({
+            label: 'Enabled'|t('app'),
+            id: 'enabled',
+            name: 'enabled',
+            on: page.enabled ?? true,
+        }) }}
+
+        {{ forms.selectField({
+            label: 'Page Type'|t('docs-manager'),
+            id: 'pageType',
+            name: 'pageType',
+            value: page.pageType,
+            options: pageTypeOptions,
+            errors: page.getErrors('pageType'),
+        }) }}
+    </div>
+
+    {% if page.id %}
+        <div class="meta read-only">
+            <div class="data">
+                <h5 class="heading">{{ 'Source'|t('docs-manager') }}</h5>
+                <div class="value">
+                    <a href="{{ url('docs-manager/sources/' ~ sourceRecord.id) }}">{{ sourceRecord.name }}</a>
+                </div>
+            </div>
+            <div class="data">
+                <h5 class="heading">{{ 'Date Created'|t('app') }}</h5>
+                <div class="value">{{ page.dateCreated|lrDatetime('short') }}</div>
+            </div>
+            <div class="data">
+                <h5 class="heading">{{ 'Date Updated'|t('app') }}</h5>
+                <div class="value">{{ page.dateUpdated|lrDatetime('short') }}</div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% js %}
+    // Auto-generate slug from title
+    var titleInput = document.getElementById('title');
+    var slugInput = document.getElementById('slug');
+    var slugModified = {{ page.slug ? 'true' : 'false' }};
+
+    if (titleInput && slugInput) {
+        titleInput.addEventListener('input', function() {
+            if (!slugModified) {
+                slugInput.value = titleInput.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/[\s-]+/g, '-')
+                    .replace(/^-|-$/g, '');
+            }
+        });
+
+        slugInput.addEventListener('input', function() {
+            slugModified = true;
+        });
+    }
+
+    // Set platform-specific keyboard shortcut
+    var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    var saveShortcut = document.getElementById('save-shortcut');
+    if (saveShortcut) {
+        saveShortcut.textContent = isMac ? '⌘S' : 'Ctrl+S';
+    }
+{% endjs %}

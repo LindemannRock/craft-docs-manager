@@ -1,0 +1,12 @@
+# Exclude dev/build files from Packagist distribution
+ecs.php export-ignore
+phpstan.neon export-ignore
+phpunit.xml.dist export-ignore
+tests/ export-ignore
+docs/ export-ignore
+
+# Release automation (CI-only)
+release-please-config.json export-ignore
+.release-please-manifest.json export-ignore
+.github/ export-ignore
+.githooks/ export-ignore

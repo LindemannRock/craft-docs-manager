@@ -1,0 +1,67 @@
+{#
+/**
+ * Example Documentation Layout Template
+ *
+ * INSTRUCTIONS:
+ * Copy this file to: templates/plugins/_layout.twig
+ * Customize the header, footer, and styling to match your site design
+ */
+#}
+{% set docsManagerSettings = craft.app.plugins.getPlugin('docs-manager').settings %}
+{% if docsManagerSettings.enableSyntaxHighlighting %}
+    {# Set code highlighter theme from docs-manager settings #}
+    {% do craft.codeHighlighter.setTheme(docsManagerSettings.codeTheme) %}
+{% endif %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - {{ siteName }}</title>
+
+    {% if entry is defined and entry.description %}
+        <meta name="description" content="{{ entry.description }}">
+    {% endif %}
+
+    {# Tailwind CSS - replace with your own CSS #}
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Anchor links */
+        article h2:hover::before,
+        article h3:hover::before {
+            content: "#";
+            position: absolute;
+            left: -1.5rem;
+            color: #94a3b8;
+        }
+
+        article h2, article h3 {
+            position: relative;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    {# Header - customize with your site header #}
+    <header class="bg-white border-b sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="text-2xl font-bold">{{ siteName }}</a>
+            <nav class="flex gap-6">
+                <a href="/plugins" class="text-gray-600 hover:text-gray-900">Plugins</a>
+                <a href="/blog" class="text-gray-600 hover:text-gray-900">Blog</a>
+                <a href="/contact" class="text-gray-600 hover:text-gray-900">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    {# Footer - customize with your site footer #}
+    <footer class="bg-white border-t mt-16">
+        <div class="max-w-7xl mx-auto px-4 py-8 text-center text-gray-600">
+            <p>&copy; {{ now|date('Y') }} LindemannRock. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

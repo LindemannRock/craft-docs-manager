@@ -1,0 +1,48 @@
+{% extends "docs-manager/_layouts/settings" %}
+{% set title = "Interface Settings"|t('docs-manager') %}
+{% set fullPageForm = true %}
+{% set selectedSettingsItem = 'interface' %}
+
+{% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
+{% set crumbs = [
+    {
+        label: docsManagerHelper.fullName|t('docs-manager'),
+        url: url('docs-manager'),
+    },
+    {
+        label: 'Settings'|t('docs-manager'),
+        url: url('docs-manager/settings'),
+    },
+    {
+        label: 'Interface'|t('docs-manager'),
+        url: url('docs-manager/settings/interface'),
+    },
+] %}
+
+{% import "_includes/forms" as forms %}
+
+{% block content %}
+    {{ actionInput('docs-manager/settings/save') }}
+    {{ redirectInput('docs-manager/settings/interface') }}
+    {{ hiddenInput('section', 'interface') }}
+
+        <h2 class="first">{{ "Interface Settings"|t('docs-manager') }}</h2>
+
+        {{ forms.textField({
+            label: "Items Per Page"|t('docs-manager'),
+            instructions: "Number of items to show per page in the Control Panel"|t('docs-manager'),
+            id: 'itemsPerPage',
+            name: 'settings[itemsPerPage]',
+            value: settings.itemsPerPage ?? 50,
+            type: 'number',
+            min: 10,
+            max: 500,
+            required: true,
+            disabled: settings.isOverriddenByConfig('itemsPerPage'),
+            warning: settings.isOverriddenByConfig('itemsPerPage') ?
+                "This is being overridden by the <code>itemsPerPage</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('itemsPerPage')
+        }) }}
+
+    {% include 'docs-manager/_components/source-credit.twig' %}
+{% endblock %}

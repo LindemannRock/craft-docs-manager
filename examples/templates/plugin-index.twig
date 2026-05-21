@@ -1,0 +1,50 @@
+{#
+/**
+ * Plugins Index Page
+ *
+ * INSTRUCTIONS:
+ * Copy to: templates/plugins/index.twig
+ * URL: /plugins
+ *
+ * Displays a list of all your plugins
+ */
+#}
+{% extends "plugins/_layout" %}
+
+{% block title %}Craft CMS Plugins{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Craft CMS Plugins</h1>
+    <p class="text-xl text-gray-600 mb-12">Professional plugins for Craft CMS 5</p>
+
+    {# Fetch all enabled plugins #}
+    {% set plugins = craft.pluginDocs.getPlugins() %}
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for plugin in plugins %}
+            <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition">
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">
+                    <a href="/plugins/{{ plugin.handle }}" class="hover:text-blue-600">
+                        {{ plugin.name }}
+                    </a>
+                    {% if plugin.currentVersion %}
+                        <span class="text-sm font-normal text-gray-500">v{{ plugin.currentVersion }}</span>
+                    {% endif %}
+                </h3>
+                <p class="text-gray-600 mb-4">{{ plugin.description }}</p>
+                <div class="flex gap-3">
+                    <a href="/plugins/{{ plugin.handle }}/docs/installation"
+                       class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        Documentation →
+                    </a>
+                    <a href="/plugins/{{ plugin.handle }}/changelog"
+                       class="text-purple-600 hover:text-purple-800 text-sm font-medium">
+                        Changelog
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

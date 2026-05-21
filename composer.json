@@ -1,0 +1,77 @@
+{
+	"name": "lindemannrock/craft-docs-manager",
+	"description": "Parse and sync documentation from markdown files to Craft CMS",
+	"type": "craft-plugin",
+	"version": "5.0.0",
+	"keywords": [
+		"craft",
+		"cms",
+		"craftcms",
+		"craft-plugin",
+		"docs-manager",
+		"documentation",
+		"markdown",
+		"parser"
+	],
+	"license": "proprietary",
+	"authors": [
+		{
+			"name": "Bilal Hary Lindemann",
+			"email": "bh@lindemannrock.com",
+			"homepage": "https://lindemannrock.com",
+			"role": "Developer"
+		}
+	],
+	"support": {
+		"email": "support@lindemannrock.com",
+		"issues": "https://github.com/LindemannRock/craft-docs-manager/issues",
+		"source": "https://github.com/LindemannRock/craft-docs-manager",
+		"docs": "https://github.com/LindemannRock/craft-docs-manager/blob/main/README.md",
+		"rss": "https://github.com/LindemannRock/craft-docs-manager/commits/main.atom"
+	},
+	"require": {
+		"php": ">=8.2",
+		"craftcms/cms": "^5.0.0",
+		"lindemannrock/craft-logging-library": "^5.0",
+		"lindemannrock/craft-code-highlighter": "^5.0",
+		"lindemannrock/craft-plugin-base": "^5.0",
+		"league/commonmark": "^2.4",
+		"symfony/yaml": "^7.0"
+	},
+	"require-dev": {
+		"craftcms/ecs": "dev-main",
+		"craftcms/phpstan": "dev-main",
+		"phpunit/phpunit": "^11.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"lindemannrock\\docsmanager\\": "src/",
+			"lindemannrock\\docsmanager\\tests\\": "tests/"
+		}
+	},
+	"scripts": {
+		"phpstan": "phpstan --ansi --memory-limit=1G",
+		"check-cs": "ecs check --ansi",
+		"fix-cs": "ecs check --fix --ansi",
+		"test": "phpunit --colors=always",
+		"install-hooks": "git config core.hooksPath .githooks 2>/dev/null || true",
+		"post-install-cmd": "@install-hooks",
+		"post-update-cmd": "@install-hooks"
+	},
+	"config": {
+		"allow-plugins": {
+			"craftcms/plugin-installer": true,
+			"yiisoft/yii2-composer": true,
+			"php-http/discovery": true
+		}
+	},
+	"extra": {
+		"name": "Docs Manager",
+		"handle": "docs-manager",
+		"developer": "LindemannRock",
+		"developerUrl": "https://lindemannrock.com",
+		"documentationUrl": "https://github.com/LindemannRock/craft-docs-manager/blob/main/README.md",
+		"changelogUrl": "https://github.com/LindemannRock/craft-docs-manager/blob/main/CHANGELOG.md",
+		"class": "lindemannrock\\docsmanager\\DocsManager"
+	}
+}

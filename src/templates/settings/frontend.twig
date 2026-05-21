@@ -1,0 +1,137 @@
+{% extends "docs-manager/_layouts/settings" %}
+{% set title = "Frontend Settings"|t('docs-manager') %}
+{% set fullPageForm = true %}
+{% set selectedSettingsItem = 'frontend' %}
+
+{% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
+{% set crumbs = [
+    {
+        label: docsManagerHelper.fullName|t('docs-manager'),
+        url: url('docs-manager'),
+    },
+    {
+        label: 'Settings'|t('docs-manager'),
+        url: url('docs-manager/settings'),
+    },
+    {
+        label: 'Frontend'|t('docs-manager'),
+        url: url('docs-manager/settings/frontend'),
+    },
+] %}
+
+{% import "_includes/forms" as forms %}
+
+{% block content %}
+    {{ actionInput('docs-manager/settings/save') }}
+    {{ redirectInput('docs-manager/settings/frontend') }}
+    {{ hiddenInput('section', 'frontend') }}
+
+        <h2 class="first">{{ "Parser Settings"|t('docs-manager') }}</h2>
+        <p class="light">{{ "These settings control how documentation is parsed and displayed on the frontend"|t('docs-manager') }}</p>
+
+        {{ forms.lightswitchField({
+            label: 'Enable Syntax Highlighting'|t('docs-manager'),
+            instructions: 'Highlight code blocks in documentation'|t('docs-manager'),
+            id: 'enableSyntaxHighlighting',
+            name: 'settings[enableSyntaxHighlighting]',
+            on: settings.enableSyntaxHighlighting,
+            disabled: settings.isOverriddenByConfig('enableSyntaxHighlighting'),
+            warning: settings.isOverriddenByConfig('enableSyntaxHighlighting') ?
+                "This is being overridden by the <code>enableSyntaxHighlighting</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('enableSyntaxHighlighting')
+        }) }}
+
+        <div id="code-highlighting-settings" style="margin-left: 2rem; {% if not settings.enableSyntaxHighlighting %}display: none;{% endif %}">
+            {{ forms.selectField({
+                label: 'Code Theme'|t('docs-manager'),
+                instructions: 'Prism.js theme for code blocks'|t('docs-manager'),
+                id: 'codeTheme',
+                name: 'settings[codeTheme]',
+                options: settings.getAvailableCodeThemes(),
+                value: settings.codeTheme,
+                disabled: settings.isOverriddenByConfig('codeTheme'),
+                warning: settings.isOverriddenByConfig('codeTheme') ?
+                    "This is being overridden by the <code>codeTheme</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+                errors: settings.getErrors('codeTheme')
+            }) }}
+
+            {{ forms.textField({
+                label: 'Font Size'|t('docs-manager'),
+                instructions: 'Font size in pixels (8-32)'|t('docs-manager'),
+                id: 'codeFontSize',
+                name: 'settings[codeFontSize]',
+                type: 'number',
+                min: 8,
+                max: 32,
+                value: settings.codeFontSize,
+                disabled: settings.isOverriddenByConfig('codeFontSize'),
+                warning: settings.isOverriddenByConfig('codeFontSize') ?
+                    "This is being overridden by the <code>codeFontSize</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+                errors: settings.getErrors('codeFontSize')
+            }) }}
+
+            {{ forms.textField({
+                label: 'Font Family (Optional)'|t('docs-manager'),
+                instructions: 'Custom font family for code blocks (e.g., "JetBrains Mono, monospace")'|t('docs-manager'),
+                id: 'codeFontFamily',
+                name: 'settings[codeFontFamily]',
+                value: settings.codeFontFamily,
+                disabled: settings.isOverriddenByConfig('codeFontFamily'),
+                warning: settings.isOverriddenByConfig('codeFontFamily') ?
+                    "This is being overridden by the <code>codeFontFamily</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+                errors: settings.getErrors('codeFontFamily')
+            }) }}
+
+            {{ forms.lightswitchField({
+                label: 'Show Line Numbers'|t('docs-manager'),
+                instructions: 'Display line numbers in code blocks'|t('docs-manager'),
+                id: 'codeShowLineNumbers',
+                name: 'settings[codeShowLineNumbers]',
+                on: settings.codeShowLineNumbers,
+                disabled: settings.isOverriddenByConfig('codeShowLineNumbers'),
+                warning: settings.isOverriddenByConfig('codeShowLineNumbers') ?
+                    "This is being overridden by the <code>codeShowLineNumbers</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+                errors: settings.getErrors('codeShowLineNumbers')
+            }) }}
+
+            {{ forms.lightswitchField({
+                label: 'Enable Copy Button'|t('docs-manager'),
+                instructions: 'Show copy-to-clipboard button on code blocks'|t('docs-manager'),
+                id: 'codeEnableCopyButton',
+                name: 'settings[codeEnableCopyButton]',
+                on: settings.codeEnableCopyButton,
+                disabled: settings.isOverriddenByConfig('codeEnableCopyButton'),
+                warning: settings.isOverriddenByConfig('codeEnableCopyButton') ?
+                    "This is being overridden by the <code>codeEnableCopyButton</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+                errors: settings.getErrors('codeEnableCopyButton')
+            }) }}
+        </div>
+
+        {{ forms.lightswitchField({
+            label: 'Enable Anchor Generation'|t('docs-manager'),
+            instructions: 'Automatically generate anchor IDs for headings'|t('docs-manager'),
+            id: 'enableAnchorGeneration',
+            name: 'settings[enableAnchorGeneration]',
+            on: settings.enableAnchorGeneration,
+            disabled: settings.isOverriddenByConfig('enableAnchorGeneration'),
+            warning: settings.isOverriddenByConfig('enableAnchorGeneration') ?
+                "This is being overridden by the <code>enableAnchorGeneration</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('enableAnchorGeneration')
+        }) }}
+
+    {% include 'docs-manager/_components/source-credit.twig' %}
+
+    {% js %}
+        // Toggle code highlighting settings visibility
+        (function() {
+            const toggle = document.getElementById('enableSyntaxHighlighting');
+            const settingsDiv = document.getElementById('code-highlighting-settings');
+
+            if (toggle && settingsDiv) {
+                toggle.addEventListener('change', function() {
+                    settingsDiv.style.display = this.checked ? 'block' : 'none';
+                });
+            }
+        })();
+    {% endjs %}
+{% endblock %}

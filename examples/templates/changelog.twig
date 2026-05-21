@@ -1,0 +1,177 @@
+{#
+/**
+ * Plugin Changelog Page
+ *
+ * INSTRUCTIONS:
+ * Copy to: templates/plugins/_changelog.twig
+ * URL: /plugins/{handle}/changelog
+ *
+ * Displays parsed CHANGELOG.md with stats and timeline
+ */
+#}
+
+{# Get plugin from URL #}
+{% set handle = craft.app.request.getSegment(2) %}
+{% set plugin = craft.pluginDocs.getPlugin(handle) %}
+{% set changelog = craft.pluginDocs.getChangelog(handle) %}
+
+{% if not plugin or not changelog %}
+    {% redirect 404 %}
+{% endif %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ plugin.name }} Changelog - {{ siteName }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    {# Header #}
+    <header class="bg-white border-b sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="text-2xl font-bold text-gray-900">{{ siteName }}</a>
+            <nav class="flex gap-6">
+                <a href="/plugins" class="text-gray-600 hover:text-gray-900">Plugins</a>
+                <a href="/plugins/{{ handle }}" class="text-gray-600 hover:text-gray-900">{{ plugin.name }}</a>
+                <a href="/plugins/{{ handle }}/docs/installation" class="text-gray-600 hover:text-gray-900">Docs</a>
+            </nav>
+        </div>
+    </header>
+
+    {# Hero Section #}
+    <div class="bg-gradient-to-br from-purple-600 to-blue-600 text-white py-16">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h1 class="text-5xl font-bold mb-4">{{ plugin.name }} Changelog</h1>
+            <p class="text-xl opacity-90">Keep up to date with all the changes</p>
+
+            {% if changelog.latest %}
+                <div class="mt-8 bg-white/10 backdrop-blur rounded-lg p-6">
+                    <p class="text-lg mb-4">
+                        {{ plugin.name }} <strong>{{ changelog.latest.version }}</strong> is on version
+                        <strong>{{ plugin.currentVersion }}</strong>, released on {{ changelog.latest.date|date('M j, Y') }}
+                    </p>
+
+                    {# Stats #}
+                    <div class="flex justify-center gap-8 text-sm">
+                        {% if changelog.latest.stats.added > 0 %}
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">✨</span>
+                                <span>{{ changelog.latest.stats.added }} New features</span>
+                            </div>
+                        {% endif %}
+                        {% if changelog.latest.stats.improved > 0 %}
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">⚡</span>
+                                <span>{{ changelog.latest.stats.improved }} Improvements</span>
+                            </div>
+                        {% endif %}
+                        {% if changelog.latest.stats.fixed > 0 %}
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">🐛</span>
+                                <span>{{ changelog.latest.stats.fixed }} Bug fixes</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <a href="{{ plugin.repositoryUrl }}/releases/tag/v{{ plugin.currentVersion }}"
+                       target="_blank"
+                       class="inline-block mt-6 px-6 py-3 bg-white text-purple-600 font-semibold rounded-lg hover:bg-gray-100">
+                        View latest release ({{ plugin.currentVersion }}) on GitHub →
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Changelog Timeline #}
+    <div class="max-w-4xl mx-auto px-4 py-12">
+        {% for release in changelog.releases %}
+            <div class="mb-12 bg-white rounded-lg border border-gray-200 p-8">
+                {# Release Header #}
+                <div class="mb-6 pb-6 border-b">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">
+                        {{ release.version }}
+                        {% if loop.first %}
+                            <span class="ml-2 text-sm font-normal bg-green-100 text-green-800 px-2 py-1 rounded">Latest</span>
+                        {% endif %}
+                    </h2>
+                    <p class="text-gray-600">Released {{ release.date|date('F j, Y') }}</p>
+                </div>
+
+                {# Changes #}
+                {% if release.added|length > 0 %}
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <span class="text-green-600">✨</span> Added
+                        </h3>
+                        <ul class="space-y-2">
+                            {% for item in release.added %}
+                                <li class="flex gap-3">
+                                    <span class="text-green-600 mt-1">•</span>
+                                    <span class="text-gray-700">{{ item }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if release.improved|length > 0 %}
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <span class="text-blue-600">⚡</span> Improved
+                        </h3>
+                        <ul class="space-y-2">
+                            {% for item in release.improved %}
+                                <li class="flex gap-3">
+                                    <span class="text-blue-600 mt-1">•</span>
+                                    <span class="text-gray-700">{{ item }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if release.fixed|length > 0 %}
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <span class="text-red-600">🐛</span> Fixed
+                        </h3>
+                        <ul class="space-y-2">
+                            {% for item in release.fixed %}
+                                <li class="flex gap-3">
+                                    <span class="text-red-600 mt-1">•</span>
+                                    <span class="text-gray-700">{{ item }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {% if release.removed|length > 0 %}
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <span class="text-gray-600">🗑️</span> Removed
+                        </h3>
+                        <ul class="space-y-2">
+                            {% for item in release.removed %}
+                                <li class="flex gap-3">
+                                    <span class="text-gray-600 mt-1">•</span>
+                                    <span class="text-gray-700">{{ item }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    {# Footer #}
+    <footer class="bg-white border-t mt-16">
+        <div class="max-w-7xl mx-auto px-4 py-8 text-center text-gray-600">
+            <p>&copy; {{ now|date('Y') }} LindemannRock. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

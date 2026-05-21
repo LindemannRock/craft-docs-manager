@@ -1,0 +1,9 @@
+{
+    "name": "Docs Manager",
+    "handle": "docs-manager",
+    "description": "Parse and sync documentation from markdown files to Craft CMS",
+    "version": "5.0.0",
+    "developer": "LindemannRock",
+    "developerUrl": "https://lindemannrock.com",
+    "documentationUrl": "https://lindemannrock.com/craft-plugins/docs-manager/docs"
+}

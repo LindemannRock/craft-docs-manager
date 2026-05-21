@@ -1,0 +1,35 @@
+{% extends "_layouts/cp" %}
+
+{% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
+
+{# Build subnav based on what actually exists #}
+{% set subnav = {
+    'docs-manager': {
+        label: 'Dashboard'|t('docs-manager'),
+        url: url('docs-manager')
+    },
+    'docs-manager/sources': {
+        label: 'Sources'|t('docs-manager'),
+        url: url('docs-manager/sources')
+    }
+} %}
+
+{# Add Logs if Logging Library is installed #}
+{% if craft.app.plugins.isPluginInstalled('logging-library') %}
+    {% set subnav = subnav|merge({
+        'docs-manager/logs': {
+            label: 'Logs'|t('docs-manager'),
+            url: url('docs-manager/logs')
+        }
+    }) %}
+{% endif %}
+
+{# Add Settings if user is admin #}
+{% if currentUser.admin %}
+    {% set subnav = subnav|merge({
+        'settings': {
+            label: 'Settings'|t('app'),
+            url: url('settings/plugins/docs-manager')
+        }
+    }) %}
+{% endif %}

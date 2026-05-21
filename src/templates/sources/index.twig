@@ -1,0 +1,374 @@
+{% extends 'lindemannrock-base/_layouts/cp-table' %}
+
+{% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
+{% set settings = plugin.getSettings() %}
+
+{# Get query parameters #}
+{% set search = craft.app.request.getParam('search', '') %}
+{% set statusFilter = craft.app.request.getParam('status', 'all') %}
+{% set kindFilter = craft.app.request.getParam('kind', 'all') %}
+{% set sort = craft.app.request.getParam('sort', 'name') %}
+{% set dir = craft.app.request.getParam('dir', 'asc') %}
+
+{# Permission checks #}
+{% set canManage = currentUser.can('docsManager:manageSources') %}
+
+{# Site crumb for multi-site #}
+{% set siteCrumbs = [] %}
+{% if craft.app.getIsMultiSite() %}
+	{% set currentSite = craft.app.sites.getCurrentSite() %}
+	{% set siteParam = craft.app.request.getParam('site') %}
+	{% set selectedSiteHandle = siteParam ?: currentSite.handle %}
+	{% set selectedSite = siteParam ? craft.app.sites.getSiteByHandle(siteParam) : currentSite %}
+
+	{% set siteMenuItems = [] %}
+	{% for site in plugin.getEnabledSites() %}
+		{% set siteMenuItems = siteMenuItems|merge([{
+			label: site.name,
+			url: url('docs-manager/sources', {site: site.handle}),
+			selected: site.handle == selectedSiteHandle
+		}]) %}
+	{% endfor %}
+
+	{% set siteCrumbs = [{
+		id: 'site-crumb',
+		icon: 'world',
+		label: selectedSite.name|t('site'),
+		menu: {
+			items: siteMenuItems,
+			label: 'Select site'|t('app')
+		}
+	}] %}
+{% endif %}
+
+{% set tableConfig = {
+	plugin: {
+		handle: 'docs-manager',
+		name: docsManagerHelper.fullName,
+	},
+	page: {
+		title: 'Sources'|t('docs-manager'),
+		subnav: 'sources',
+		crumbs: siteCrumbs|merge([
+			{ label: docsManagerHelper.fullName, url: url('docs-manager') },
+			{ label: 'Sources'|t('docs-manager'), url: url('docs-manager/sources') },
+		]),
+	},
+	filters: [
+		{
+			type: 'status',
+			param: 'status',
+			current: statusFilter,
+			label: 'All'|t('docs-manager'),
+			groups: [
+				{
+					param: 'status',
+					current: statusFilter,
+					options: [
+						{value: 'all', label: 'All'|t('docs-manager'), status: 'all'},
+						{value: 'enabled', label: 'Enabled'|t('docs-manager'), status: 'green'},
+						{value: 'disabled', label: 'Disabled'|t('docs-manager'), status: 'disabled'},
+					],
+				},
+				{
+					header: 'Doc Type'|t('docs-manager'),
+					param: 'kind',
+					current: kindFilter,
+					colorSet: 'sourceKind',
+					options: [
+						{value: 'all', label: 'All Types'|t('docs-manager'), status: 'all'},
+						{value: 'plugin', label: 'Plugin'|t('docs-manager'), colorKey: 'plugin'},
+						{value: 'theme', label: 'Theme'|t('docs-manager'), colorKey: 'theme'},
+					],
+				},
+			],
+		},
+	],
+	search: {
+		placeholder: 'Search sources...'|t('docs-manager'),
+		value: search,
+	},
+	sort: {
+		field: sort,
+		direction: dir,
+	},
+	table: {
+		columns: [
+			{key: 'name', label: 'Name'|t('docs-manager'), sortable: true},
+			{key: 'handle', label: 'Handle'|t('docs-manager'), sortable: true, hideable: true},
+			{key: 'kind', label: 'Doc Type'|t('docs-manager'), sortable: true, hideable: true},
+			{key: 'currentVersion', label: 'Version'|t('docs-manager'), hideable: true},
+			{key: 'pages', label: 'Pages'|t('docs-manager'), hideable: true},
+			{key: 'lastSyncedAt', label: 'Last Synced'|t('docs-manager'), sortable: true, hideable: true},
+			{key: 'enabled', label: 'Status'|t('app'), sortable: true, hideable: true},
+		],
+		items: sources,
+		emptyMessage: 'No sources found.'|t('docs-manager'),
+	},
+	pagination: {
+		page: page,
+		limit: limit,
+		totalCount: totalCount,
+		itemLabel: {singular: 'source'|t('docs-manager'), plural: 'sources'|t('docs-manager')},
+	},
+	checkboxes: canManage,
+	newButton: {
+		url: url('docs-manager/sources/new'),
+		label: 'New Source'|t('docs-manager'),
+		permission: 'docsManager:createSources',
+	},
+} %}
+
+{% block toolbarActions %}
+	<button type="button" class="btn" id="sync-all-btn">{{ 'Sync All'|t('docs-manager') }}</button>
+{% endblock %}
+
+{% block tableRow %}
+	{# Name #}
+	<td data-column="name">
+		<a class="label-link" href="{{ url('docs-manager/sources/' ~ item.id) }}">
+			<span>{{ item.name }}</span>
+		</a>
+	</td>
+
+	{# Handle #}
+	<td data-column="handle">
+		<code>{{ item.handle }}</code>
+	</td>
+
+	{# Doc Type #}
+	<td data-column="kind">
+		{% include 'lindemannrock-base/_components/badge' with {
+			label: item.kind|capitalize,
+			value: item.kind,
+			colorSet: 'sourceKind',
+		} only %}
+	</td>
+
+	{# Version #}
+	<td data-column="currentVersion">
+		{{ item.currentVersion ?? '--' }}
+	</td>
+
+	{# Pages #}
+	<td data-column="pages">
+		{{ craft.docsManager.getPages(item.handle)|length }}
+	</td>
+
+	{# Last Synced #}
+	<td data-column="lastSyncedAt">
+		{% if item.lastSyncedAt %}
+			{{ item.lastSyncedAt|lrDatetime('short') }}
+		{% else %}
+			<span class="light">--</span>
+		{% endif %}
+	</td>
+
+	{# Status #}
+	<td data-column="enabled">
+		{% include 'lindemannrock-base/_components/badge' with {
+			label: item.enabled ? 'Enabled'|t('docs-manager') : 'Disabled'|t('docs-manager'),
+			value: item.enabled ? 'enabled' : 'disabled',
+			colorSet: 'status',
+		} only %}
+	</td>
+{% endblock %}
+
+{% block rowActions %}
+	{% set actionItems = [
+		{
+			label: 'Edit'|t('app'),
+			url: url('docs-manager/sources/' ~ item.id),
+		},
+		{
+			label: 'Sync'|t('docs-manager'),
+			jsAction: 'sync',
+			data: {name: item.name},
+		},
+	] %}
+
+	{% if canManage %}
+		{% set actionItems = actionItems|merge([
+			{type: 'divider'},
+			{
+				label: 'Delete'|t('app'),
+				class: 'error',
+				jsAction: 'delete',
+				data: {name: item.name},
+			},
+		]) %}
+	{% endif %}
+
+	{% include 'lindemannrock-base/_components/row-actions' with {
+		item: item,
+		actions: {
+			type: 'menu',
+			icon: 'settings',
+			title: 'Actions'|t('app'),
+			items: actionItems,
+		},
+	} only %}
+{% endblock %}
+
+{% block bulkActions %}
+	{% if canManage %}
+		<button type="button" class="btn menubtn secondary" id="lr-bulk-status-btn">
+			{{ 'Set status'|t('app') }}
+		</button>
+		<div class="menu">
+			<ul>
+				<li><a id="lr-bulk-enable-action">{{ 'Enable'|t('docs-manager') }}</a></li>
+				<li><a id="lr-bulk-disable-action">{{ 'Disable'|t('docs-manager') }}</a></li>
+			</ul>
+		</div>
+
+		<button type="button" class="btn secondary" id="lr-bulk-delete-btn">
+			{{ 'Delete'|t('app') }} (<span id="lr-selected-count">0</span>)
+		</button>
+	{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+	// Initialize bulk status menu
+	const bulkStatusBtn = document.getElementById('lr-bulk-status-btn');
+	if (bulkStatusBtn && typeof Craft !== 'undefined' && Craft.MenuBtn) {
+		new Craft.MenuBtn(bulkStatusBtn);
+	}
+
+	// Sync All button
+	document.getElementById('sync-all-btn')?.addEventListener('click', function() {
+		if (!confirm(Craft.t('docs-manager', 'Sync all enabled sources? This may take a while.'))) {
+			return;
+		}
+
+		const btn = this;
+		const originalText = btn.textContent;
+		btn.disabled = true;
+		btn.textContent = Craft.t('docs-manager', 'Syncing...');
+
+		Craft.sendActionRequest('POST', 'docs-manager/sources/sync-all')
+			.then(function(response) {
+				btn.disabled = false;
+				btn.textContent = originalText;
+
+				if (response.data.success) {
+					Craft.cp.displayNotice(Craft.t('docs-manager', 'All sources synced successfully'));
+					setTimeout(() => window.location.reload(), 1000);
+				} else {
+					Craft.cp.displayError(Craft.t('docs-manager', 'Some sources failed to sync'));
+				}
+			})
+			.catch(function() {
+				btn.disabled = false;
+				btn.textContent = originalText;
+				Craft.cp.displayError(Craft.t('docs-manager', 'Failed to sync sources'));
+			});
+	});
+
+	// Bulk enable
+	document.getElementById('lr-bulk-enable-action')?.addEventListener('click', function(e) {
+		e.preventDefault();
+		const ids = window.lrTableSelection.getSelectedIds();
+		if (ids.length === 0) return;
+
+		Craft.sendActionRequest('POST', 'docs-manager/sources/bulk-enable', {
+			data: { sourceIds: ids }
+		}).then(function(response) {
+			if (response.data.success) {
+				Craft.cp.displayNotice(Craft.t('docs-manager', 'Sources enabled'));
+				setTimeout(() => window.location.reload(), 1000);
+			}
+		}).catch(function() {
+			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to enable sources'));
+		});
+	});
+
+	// Bulk disable
+	document.getElementById('lr-bulk-disable-action')?.addEventListener('click', function(e) {
+		e.preventDefault();
+		const ids = window.lrTableSelection.getSelectedIds();
+		if (ids.length === 0) return;
+
+		Craft.sendActionRequest('POST', 'docs-manager/sources/bulk-disable', {
+			data: { sourceIds: ids }
+		}).then(function(response) {
+			if (response.data.success) {
+				Craft.cp.displayNotice(Craft.t('docs-manager', 'Sources disabled'));
+				setTimeout(() => window.location.reload(), 1000);
+			}
+		}).catch(function() {
+			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to disable sources'));
+		});
+	});
+
+	// Bulk delete
+	document.getElementById('lr-bulk-delete-btn')?.addEventListener('click', function() {
+		const ids = window.lrTableSelection.getSelectedIds();
+		if (ids.length === 0) return;
+
+		if (!confirm(Craft.t('docs-manager', 'Delete {count} source(s)? This cannot be undone.', {count: ids.length}))) return;
+
+		Craft.sendActionRequest('POST', 'docs-manager/sources/bulk-delete', {
+			data: { sourceIds: ids }
+		}).then(function(response) {
+			if (response.data.success) {
+				Craft.cp.displayNotice(Craft.t('docs-manager', 'Sources deleted'));
+				setTimeout(() => window.location.reload(), 1000);
+			}
+		}).catch(function() {
+			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to delete sources'));
+		});
+	});
+
+	// Individual row action clicks
+	document.querySelectorAll('[data-action]').forEach(function(btn) {
+		btn.addEventListener('click', function(e) {
+			e.preventDefault();
+			const action = this.dataset.action;
+			const id = this.dataset.id;
+			const name = this.dataset.name || '';
+
+			if (action === 'sync') {
+				Craft.sendActionRequest('POST', 'docs-manager/sources/sync', {
+					data: { sourceId: id }
+				}).then(function(response) {
+					if (response.data.success) {
+						Craft.cp.displayNotice(Craft.t('docs-manager', 'Source "{name}" synced', {name: name}));
+						setTimeout(() => window.location.reload(), 1000);
+					} else {
+						Craft.cp.displayError(response.data.error || Craft.t('docs-manager', 'Sync failed'));
+					}
+				}).catch(function() {
+					Craft.cp.displayError(Craft.t('docs-manager', 'Failed to sync source'));
+				});
+			} else if (action === 'delete') {
+				if (!confirm(Craft.t('docs-manager', 'Delete source "{name}"? This cannot be undone.', {name: name}))) return;
+
+				Craft.sendActionRequest('POST', 'docs-manager/sources/delete', {
+					data: { sourceId: id }
+				}).then(function(response) {
+					if (response.data && response.data.success !== false) {
+						Craft.cp.displayNotice(Craft.t('docs-manager', 'Source deleted'));
+						setTimeout(() => window.location.reload(), 1000);
+					} else {
+						Craft.cp.displayError(Craft.t('docs-manager', 'Failed to delete source'));
+					}
+				}).catch(function() {
+					Craft.cp.displayError(Craft.t('docs-manager', 'Failed to delete source'));
+				});
+			}
+		});
+	});
+
+	// Update selected count
+	document.addEventListener('lr:selectionChanged', function(e) {
+		const countSpan = document.getElementById('lr-selected-count');
+		if (countSpan) {
+			countSpan.textContent = e.detail.count;
+		}
+	});
+})();
+</script>
+{% endblock %}

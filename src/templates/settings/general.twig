@@ -1,0 +1,140 @@
+{% extends "docs-manager/_layouts/settings" %}
+{% set title = "General Settings"|t('docs-manager') %}
+{% set fullPageForm = true %}
+{% set selectedSettingsItem = 'general' %}
+
+{% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
+{% set crumbs = [
+    {
+        label: docsManagerHelper.fullName|t('docs-manager'),
+        url: url('docs-manager'),
+    },
+    {
+        label: 'Settings'|t('docs-manager'),
+        url: url('docs-manager/settings'),
+    },
+] %}
+
+{% import "_includes/forms" as forms %}
+
+{% block content %}
+    {{ actionInput('docs-manager/settings/save') }}
+    {{ redirectInput('docs-manager/settings/general') }}
+    {{ hiddenInput('section', 'general') }}
+
+        <h2>{{ "General Settings"|t('docs-manager') }}</h2>
+
+        {{ forms.textField({
+            label: 'Plugin Name'|t('docs-manager'),
+            instructions: 'The name shown in the Control Panel'|t('docs-manager'),
+            id: 'pluginName',
+            name: 'settings[pluginName]',
+            value: settings.pluginName,
+            required: true,
+            disabled: settings.isOverriddenByConfig('pluginName'),
+            warning: settings.isOverriddenByConfig('pluginName') ?
+                "This is being overridden by the <code>pluginName</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('pluginName')
+        }) }}
+
+        {% set siteOptions = [] %}
+        {% for site in craft.app.sites.getAllSites() %}
+            {% set siteOptions = siteOptions|merge([{
+                label: site.name,
+                value: site.id
+            }]) %}
+        {% endfor %}
+
+        {{ forms.checkboxGroupField({
+            label: "Enabled Sites"|t('docs-manager'),
+            instructions: "Select which sites {pluginName} should be enabled for. Leave empty to enable for all sites."|t('docs-manager', {pluginName: docsManagerHelper.fullName}),
+            id: 'enabledSites',
+            name: 'settings[enabledSites]',
+            options: siteOptions,
+            values: settings.enabledSites ?? [],
+            disabled: settings.isOverriddenByConfig('enabledSites'),
+            warning: settings.isOverriddenByConfig('enabledSites') ?
+                "This is being overridden by the <code>enabledSites</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('enabledSites')
+        }) }}
+
+        <hr>
+
+        <h2>{{ "Source Settings"|t('docs-manager') }}</h2>
+
+        {{ forms.selectField({
+            label: 'Default Source Type'|t('docs-manager'),
+            instructions: 'Default source type for new sources (each source can override this individually)'|t('docs-manager'),
+            id: 'defaultSourceType',
+            name: 'settings[defaultSourceType]',
+            value: settings.defaultSourceType,
+            options: [
+                { label: 'Local File System', value: 'local' },
+                { label: 'GitHub API', value: 'github-api' },
+            ],
+            disabled: settings.isOverriddenByConfig('defaultSourceType'),
+            warning: settings.isOverriddenByConfig('defaultSourceType') ?
+                "This is being overridden by the <code>defaultSourceType</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('defaultSourceType')
+        }) }}
+
+        {{ forms.autosuggestField({
+            label: 'Local Plugin Base Path'|t('docs-manager'),
+            instructions: 'Base path to plugins folder (used for local source type)'|t('docs-manager'),
+            id: 'localPluginBasePath',
+            name: 'settings[localPluginBasePath]',
+            value: settings.localPluginBasePath,
+            placeholder: '@root/plugins',
+            suggestEnvVars: true,
+            suggestAliases: true,
+            disabled: settings.isOverriddenByConfig('localPluginBasePath'),
+            warning: settings.isOverriddenByConfig('localPluginBasePath') ?
+                "This is being overridden by the <code>localPluginBasePath</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('localPluginBasePath')
+        }) }}
+
+        {{ forms.autosuggestField({
+            label: 'GitHub Token'|t('docs-manager'),
+            instructions: 'Personal access token for GitHub API (used for github-api source type, required for private repos and higher rate limits)'|t('docs-manager'),
+            id: 'githubToken',
+            name: 'settings[githubToken]',
+            value: settings.githubToken,
+            placeholder: '$GITHUB_TOKEN',
+            suggestEnvVars: true,
+            disabled: settings.isOverriddenByConfig('githubToken'),
+            warning: settings.isOverriddenByConfig('githubToken') ?
+                "This is being overridden by the <code>githubToken</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('githubToken')
+        }) }}
+
+        <hr>
+
+        <h2>{{ "Logging Settings"|t('docs-manager') }}</h2>
+
+        {% set logOptions = [
+            {value: 'error', label: 'Error (Critical errors only)'|t('docs-manager')},
+            {value: 'warning', label: 'Warning (Errors and warnings)'|t('docs-manager')},
+            {value: 'info', label: 'Info (General information)'|t('docs-manager')},
+        ] %}
+
+        {% if craft.app.config.general.devMode %}
+            {% set logOptions = logOptions|merge([
+                {value: 'debug', label: 'Debug (Detailed debugging)'|t('docs-manager')}
+            ]) %}
+        {% endif %}
+
+        {{ forms.selectField({
+            label: 'Log Level'|t('docs-manager'),
+            instructions: 'Choose what types of messages to log. Debug level requires devMode to be enabled.'|t('docs-manager'),
+            id: 'logLevel',
+            name: 'settings[logLevel]',
+            value: settings.logLevel,
+            options: logOptions,
+            disabled: settings.isOverriddenByConfig('logLevel'),
+            warning: settings.isOverriddenByConfig('logLevel') ?
+                "This is being overridden by the <code>logLevel</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('logLevel')
+        }) }}
+
+    {% include 'docs-manager/_components/source-credit.twig' %}
+{% endblock %}

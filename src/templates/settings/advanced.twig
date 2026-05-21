@@ -1,0 +1,61 @@
+{% extends "docs-manager/_layouts/settings" %}
+{% set title = "Advanced Settings"|t('docs-manager') %}
+{% set fullPageForm = true %}
+{% set selectedSettingsItem = 'advanced' %}
+
+{% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
+{% set crumbs = [
+    {
+        label: docsManagerHelper.fullName|t('docs-manager'),
+        url: url('docs-manager'),
+    },
+    {
+        label: 'Settings'|t('docs-manager'),
+        url: url('docs-manager/settings'),
+    },
+] %}
+
+{% import "_includes/forms" as forms %}
+
+{% block content %}
+    {{ actionInput('docs-manager/settings/save') }}
+    {{ redirectInput('docs-manager/settings/advanced') }}
+    {{ hiddenInput('section', 'advanced') }}
+
+        <h2>{{ "Sync Settings"|t('docs-manager') }}</h2>
+
+        {{ forms.lightswitchField({
+            label: 'Auto Sync'|t('docs-manager'),
+            instructions: 'Automatically sync documentation on a schedule (when enabled, manual sync buttons still work)'|t('docs-manager'),
+            id: 'autoSync',
+            name: 'settings[autoSync]',
+            on: settings.autoSync,
+            toggle: 'sync-schedule-settings',
+            disabled: settings.isOverriddenByConfig('autoSync'),
+            warning: settings.isOverriddenByConfig('autoSync') ?
+                "This is being overridden by the <code>autoSync</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+            errors: settings.getErrors('autoSync')
+        }) }}
+
+        <div id="sync-schedule-settings" class="{{ not settings.autoSync ? 'hidden' }}">
+            {{ forms.selectField({
+                label: 'Sync Schedule'|t('docs-manager'),
+                instructions: 'How often to automatically sync all enabled sources'|t('docs-manager'),
+                id: 'syncSchedule',
+                name: 'settings[syncSchedule]',
+                value: settings.syncSchedule,
+                options: [
+                    { label: 'Hourly', value: 'hourly' },
+                    { label: 'Daily', value: 'daily' },
+                    { label: 'Weekly', value: 'weekly' },
+                    { label: 'Monthly', value: 'monthly' },
+                ],
+                disabled: settings.isOverriddenByConfig('syncSchedule'),
+                warning: settings.isOverriddenByConfig('syncSchedule') ?
+                    "This is being overridden by the <code>syncSchedule</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
+                errors: settings.getErrors('syncSchedule')
+            }) }}
+        </div>
+
+    {% include 'docs-manager/_components/source-credit.twig' %}
+{% endblock %}

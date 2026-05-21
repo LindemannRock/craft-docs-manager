@@ -1,0 +1,69 @@
+{#
+/**
+ * Plugin Detail Page
+ *
+ * INSTRUCTIONS:
+ * Copy to: templates/plugins/_plugin.twig
+ * URL: /plugins/{handle}
+ *
+ * Shows plugin overview with links to all documentation sections
+ */
+#}
+{% extends "plugins/_layout" %}
+
+{# Get plugin from URL #}
+{% set handle = craft.app.request.getSegment(2) %}
+{% set plugin = craft.pluginDocs.getPlugin(handle) %}
+
+{% if not plugin %}
+    {% redirect 404 %}
+{% endif %}
+
+{% block title %}{{ plugin.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-12">
+    {# Plugin Header #}
+    <div class="mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">{{ plugin.name }}</h1>
+        {% if plugin.currentVersion %}
+            <p class="text-gray-500 mb-4">Version {{ plugin.currentVersion }}</p>
+        {% endif %}
+        <p class="text-xl text-gray-600">{{ plugin.description }}</p>
+    </div>
+
+    {# Get navigation structure from index.json #}
+    {% set navigation = craft.pluginDocs.getNavigation(handle) %}
+
+    {# Documentation Sections #}
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for categoryKey, group in navigation %}
+            <div class="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">{{ group.label }}</h3>
+                <ul class="space-y-2">
+                    {% for page in group.pages %}
+                        <li>
+                            <a href="/plugins/{{ handle }}/docs/{{ page.slug }}"
+                               class="text-blue-600 hover:text-blue-800">
+                                {{ page.title }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# Quick Links #}
+    <div class="mt-12 flex gap-4">
+        <a href="{{ plugin.repositoryUrl }}" target="_blank"
+           class="px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-800">
+            View on GitHub
+        </a>
+        <a href="/plugins/{{ handle }}/docs/installation"
+           class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            Get Started
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,423 @@
+{% extends "_layouts/cp" %}
+
+{% set pluginInstance = craft.app.plugins.getPlugin('docs-manager') %}
+
+{% set title = isNew ? 'Add Source'|t('docs-manager') : source.name %}
+{% set selectedSubnavItem = 'sources' %}
+{% set fullPageForm = true %}
+
+{# Site crumb for multi-site #}
+{% set crumbs = [] %}
+{% if craft.app.getIsMultiSite() %}
+    {% set currentSite = craft.app.sites.getCurrentSite() %}
+    {% set siteParam = craft.app.request.getParam('site') %}
+    {% set selectedSiteHandle = siteParam ?: currentSite.handle %}
+    {% set selectedSite = siteParam ? craft.app.sites.getSiteByHandle(siteParam) : currentSite %}
+
+    {% set siteMenuItems = [] %}
+    {% for site in pluginInstance.getEnabledSites() %}
+        {% set siteMenuItems = siteMenuItems|merge([{
+            label: site.name,
+            url: source.id ? url('docs-manager/sources/' ~ source.id, {site: site.handle}) : url('docs-manager/sources/new', {site: site.handle}),
+            selected: site.handle == selectedSiteHandle
+        }]) %}
+    {% endfor %}
+
+    {% set crumbs = [{
+        id: 'site-crumb',
+        icon: 'world',
+        label: selectedSite.name|t('site'),
+        menu: {
+            items: siteMenuItems,
+            label: 'Select site'|t('app')
+        }
+    }] %}
+{% endif %}
+
+{% set crumbs = crumbs|merge([
+    { label: pluginInstance.settings.pluginName, url: url('docs-manager') },
+    { label: 'Sources'|t('docs-manager'), url: url('docs-manager/sources') },
+]) %}
+
+{% if source.id %}
+    {% set crumbs = crumbs|merge([{
+        label: source.name,
+        url: url('docs-manager/sources/' ~ source.id)
+    }]) %}
+{% endif %}
+
+{% import "_includes/forms" as forms %}
+
+{% block actionButton %}
+    <div class="btngroup submit">
+        <button type="submit" class="btn submit">{{ "Save"|t('app') }}</button>
+    </div>
+    {% if source.id %}
+        <button type="button" id="action-btn" class="btn menubtn action-btn hairline-dark m" title="{{ 'Actions'|t('app') }}" aria-controls="action-menu" aria-label="{{ 'Actions'|t('app') }}" data-disclosure-trigger="true" aria-expanded="false"></button>
+        <div id="action-menu" class="menu menu--disclosure">
+            <ul>
+                <li>
+                    <button class="menu-item error formsubmit" data-destructive data-action="docs-manager/sources/delete" data-params='{"sourceId":{{ source.id }}}' data-confirm="{{ 'Are you sure you want to delete this source?'|t('docs-manager') }}" data-redirect="{{ 'docs-manager/sources'|hash }}" data-headers='{"Accept":"application/json"}'>
+                        <span class="icon">{{ svg('@app/icons/trash.svg') }}</span>
+                        <span class="menu-item-label">{{ "Delete"|t('app') }}</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{# Display validation errors summary before content #}
+{% if source is defined and source.hasErrors() %}
+    {% set errorSummary = include('lindemannrock-base/_partials/error-summary', {
+        errors: source.getErrors(),
+        translationCategory: 'docs-manager',
+        linkMode: 'data-key',
+    })|trim %}
+{% endif %}
+
+{% block content %}
+    <input type="hidden" name="action" value="docs-manager/sources/save">
+    {{ redirectInput('docs-manager/sources') }}
+
+    {% if not isNew %}
+        <input type="hidden" name="sourceId" value="{{ source.id }}">
+    {% endif %}
+
+    {# Kind Selection #}
+    {{ forms.selectField({
+        first: true,
+        label: 'Kind'|t('docs-manager'),
+        instructions: 'What type of documentation source is this?'|t('docs-manager'),
+        id: 'kind',
+        name: 'source[kind]',
+        value: source.kind ?? 'plugin',
+        options: [
+            { label: 'Plugin'|t('docs-manager'), value: 'plugin' },
+            { label: 'Theme'|t('docs-manager'), value: 'theme' },
+        ],
+        errors: source.getErrors('kind'),
+    }) }}
+
+    {# Source Type Selection #}
+    {% set hasGithubToken = pluginInstance.settings.githubToken %}
+    {% set sourceOptions = [{ label: 'Local File System', value: 'local' }] %}
+    {% if hasGithubToken %}
+        {% set sourceOptions = sourceOptions|merge([{ label: 'GitHub API', value: 'github-api' }]) %}
+    {% endif %}
+    {% set sourceTypeErrors = source.getErrors('sourceType')|merge(source.getErrors('repositoryUrl'))|merge(source.getErrors('localPath')) %}
+
+    {{ forms.selectField({
+        label: 'Source Type'|t('docs-manager'),
+        instructions: 'Where to read documentation for this source'|t('docs-manager'),
+        id: 'sourceType',
+        name: 'source[sourceType]',
+        value: source.sourceType ?? pluginInstance.settings.defaultSourceType,
+        options: sourceOptions,
+        disabled: not isNew,
+        errors: sourceTypeErrors,
+    }) }}
+
+    {# Quick Add - Auto-loads available sources #}
+    {% if isNew %}
+        <div class="field" id="quick-add-field">
+            <div class="heading">
+                <label>{{ "Quick Add"|t('docs-manager') }}</label>
+            </div>
+            <div class="input">
+                <div id="source-selector-container"></div>
+            </div>
+        </div>
+    {% endif %}
+
+    <hr>
+
+    <h2>{{ "Source Information"|t('docs-manager') }}</h2>
+    <p class="light">{{ "This information is automatically synced from the source (docs/index.json or composer.json)"|t('docs-manager') }}</p>
+
+    {{ forms.textField({
+        label: 'Name'|t('docs-manager'),
+        instructions: 'The display name of this source'|t('docs-manager'),
+        id: 'name',
+        name: 'source[name]',
+        value: source.name ?? '',
+        required: true,
+        readonly: not isNew and not source.hasErrors(),
+        errors: source.getErrors('name'),
+    }) }}
+
+    {{ forms.textField({
+        label: 'Handle'|t('docs-manager'),
+        instructions: 'Unique handle for this source (auto-populated from Quick Add)'|t('docs-manager'),
+        id: 'handle',
+        name: 'source[handle]',
+        value: source.handle ?? '',
+        required: true,
+        readonly: not isNew and not source.hasErrors(),
+        errors: source.getErrors('handle'),
+    }) }}
+
+    {{ forms.textareaField({
+        label: 'Description'|t('docs-manager'),
+        instructions: 'A short description of this source'|t('docs-manager'),
+        id: 'description',
+        name: 'source[description]',
+        value: source.description ?? '',
+        rows: 2,
+        errors: source.getErrors('description'),
+    }) }}
+
+    {# Hidden fields - auto-populated from selector #}
+    <input type="hidden" id="repositoryUrl" name="source[repositoryUrl]" value="{{ source.repositoryUrl ?? '' }}">
+    <input type="hidden" id="localPath" name="source[localPath]" value="{{ source.localPath ?? '' }}">
+
+    {# Custom Pages link (only for existing sources) #}
+    {% if source.id and currentUser.can('docsManager:managePages') %}
+        <hr>
+        <h2>{{ "Custom Pages"|t('docs-manager') }}</h2>
+        {% set customPages = craft.docsManager.getCustomPages(source.handle) %}
+        <div style="margin-top: 12px;">
+            <a href="{{ url('docs-manager/pages', { sourceId: source.id }) }}" class="btn">
+                {{ "View Custom Pages ({count})"|t('docs-manager', { count: customPages|length }) }}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block details %}
+    {# Version display (read-only) - only show if exists #}
+    {% if source.id and source.currentVersion %}
+        <div class="meta">
+            <div class="field" data-attribute="version">
+                <div class="heading">
+                    <label>{{ "Version"|t('docs-manager') }}</label>
+                </div>
+                <div class="input ltr">
+                    <div class="value"><code style="font-size: 13px;">{{ source.currentVersion }}</code></div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <fieldset>
+        <legend class="h6">{{ "Status"|t('docs-manager') }}</legend>
+        <div class="meta">
+            {{ forms.lightswitchField({
+                label: "Enabled"|t('docs-manager'),
+                instructions: "Include this source in sync operations"|t('docs-manager'),
+                id: 'enabled',
+                name: 'source[enabled]',
+                on: source.enabled ?? true,
+            }) }}
+        </div>
+    </fieldset>
+
+    {% if source.id %}
+        <fieldset>
+            <legend class="h6">{{ "Sync"|t('docs-manager') }}</legend>
+            <div class="meta" style="padding-top: 16px; padding-bottom: 16px;">
+                <button type="button" id="sync-source-btn" class="btn secondary fullwidth">
+                    {{ "Resync Source Data"|t('docs-manager') }}
+                </button>
+            </div>
+        </fieldset>
+    {% endif %}
+
+    {% if source.id %}
+        <dl class="meta read-only">
+            <div class="data">
+                <dt class="heading">{{ "ID"|t('app') }}</dt>
+                <dd class="value">{{ source.id }}</dd>
+            </div>
+            <div class="data">
+                <dt class="heading">{{ "Kind"|t('docs-manager') }}</dt>
+                <dd class="value">{{ source.kind|capitalize }}</dd>
+            </div>
+            <div class="data">
+                <dt class="heading">{{ "Status"|t('app') }}</dt>
+                <dd class="value">
+                    {% if source.enabled %}
+                        <span class="status live"></span>
+                        <span>{{ 'Live'|t('app') }}</span>
+                    {% else %}
+                        <span class="status disabled"></span>
+                        <span>{{ 'Disabled'|t('app') }}</span>
+                    {% endif %}
+                </dd>
+            </div>
+            <div class="data">
+                <dt class="heading">{{ "Pages"|t('docs-manager') }}</dt>
+                <dd class="value">{{ craft.docsManager.getPages(source.handle)|length }}</dd>
+            </div>
+            <div class="data">
+                <dt class="heading">{{ "Created at"|t('app') }}</dt>
+                <dd class="value">{{ source.dateCreated|lrDatetime('short') }}</dd>
+            </div>
+            <div class="data">
+                <dt class="heading">{{ "Updated at"|t('app') }}</dt>
+                <dd class="value">{{ source.dateUpdated|lrDatetime('short') }}</dd>
+            </div>
+            {% if source.lastSyncedAt %}
+                <div class="data">
+                    <dt class="heading">{{ "Last Synced"|t('docs-manager') }}</dt>
+                    <dd class="value">{{ source.lastSyncedAt|lrDatetime('short') }}</dd>
+                </div>
+            {% endif %}
+        </dl>
+    {% endif %}
+{% endblock %}
+
+{% js %}
+    // Initialize disclosure menu
+    if (typeof Craft !== 'undefined' && Craft.ui && Craft.ui.createDisclosureMenu) {
+        const actionBtn = document.getElementById('action-btn');
+        if (actionBtn) {
+            new Craft.ui.createDisclosureMenu(actionBtn);
+        }
+    }
+
+    {% if source.id %}
+        // Sync source button
+        document.getElementById('sync-source-btn').addEventListener('click', function() {
+            const btn = this;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '{{ "Syncing..."|t('docs-manager') }}';
+
+            Craft.sendActionRequest('POST', 'docs-manager/sources/sync', {
+                data: { sourceId: {{ source.id }} }
+            })
+            .then(response => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+
+                if (response.data.success) {
+                    Craft.cp.displayNotice('{{ "Source synced successfully"|t('docs-manager') }}');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    Craft.cp.displayError(response.data.error || '{{ "Sync failed"|t('docs-manager') }}');
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                Craft.cp.displayError('{{ "Failed to sync source"|t('docs-manager') }}');
+            });
+        });
+    {% endif %}
+
+    {% if isNew %}
+        // Auto-load available sources when source type or kind changes
+        const sourceTypeSelect = document.getElementById('sourceType');
+        const kindSelect = document.getElementById('kind');
+        const selectorContainer = document.getElementById('source-selector-container');
+
+        function loadAvailableSources() {
+            const sourceType = sourceTypeSelect.value;
+
+            if (sourceType === 'local') {
+                loadLocalSources();
+            } else if (sourceType === 'github-api') {
+                loadGithubSources();
+            }
+        }
+
+        function filterByKind(sources) {
+            const selectedKind = kindSelect.value;
+            return sources.filter(s => s.kind === selectedKind);
+        }
+
+        function loadLocalSources() {
+            selectorContainer.innerHTML = '<p class="light">{{ "Loading local sources..."|t('docs-manager') }}</p>';
+
+            Craft.sendActionRequest('POST', 'docs-manager/sources/scan-local')
+                .then(response => {
+                    const filtered = filterByKind(response.data.sources || []);
+                    if (filtered.length > 0) {
+                        showSourceSelector(filtered);
+                    } else {
+                        selectorContainer.innerHTML = '<p class="light">{{ "No new sources found for this kind."|t('docs-manager') }}</p>';
+                    }
+                })
+                .catch(error => {
+                    selectorContainer.innerHTML = '<p class="error">{{ "Failed to load local sources"|t('docs-manager') }}</p>';
+                });
+        }
+
+        function loadGithubSources() {
+            selectorContainer.innerHTML = '<p class="light">{{ "Loading GitHub repositories..."|t('docs-manager') }}</p>';
+
+            Craft.sendActionRequest('POST', 'docs-manager/sources/scan-github')
+                .then(response => {
+                    let html = '';
+
+                    const filtered = filterByKind(response.data.sources || []);
+                    if (filtered.length > 0) {
+                        showSourceSelector(filtered);
+                        return;
+                    }
+
+                    html = '<p class="light">{{ "No new sources found for this kind."|t('docs-manager') }}</p>';
+
+                    if (response.data.missingIndexJson && response.data.missingIndexJson.length > 0) {
+                        html += '<div style="margin-top: 16px; padding: 12px; background: #fef3cd; border: 1px solid #f0ad4e; border-radius: 4px;">';
+                        html += '<p style="margin: 0 0 8px 0; font-weight: 600;">{{ "Sources missing docs/index.json:"|t('docs-manager') }}</p>';
+                        html += '<ul style="margin: 0; padding-left: 20px;">';
+                        response.data.missingIndexJson.forEach(s => {
+                            html += `<li><a href="${s.url}" target="_blank">${s.name}</a> - <span class="light">Create docs/index.json to enable syncing</span></li>`;
+                        });
+                        html += '</ul>';
+                        html += '</div>';
+                    }
+
+                    selectorContainer.innerHTML = html;
+                })
+                .catch(error => {
+                    selectorContainer.innerHTML = '<p class="error">{{ "Failed to load GitHub repositories. Check your GitHub token in settings."|t('docs-manager') }}</p>';
+                });
+        }
+
+        function showSourceSelector(sources) {
+            let html = '<div class="select"><select id="discovered-sources" class="fullwidth">';
+            html += '<option value="">{{ "Select a source to add..."|t('docs-manager') }}</option>';
+
+            sources.forEach(s => {
+                html += `<option value='${JSON.stringify(s)}'>${s.name} (${s.handle})</option>`;
+            });
+
+            html += '</select></div>';
+            html += '<p class="light" style="margin-top: 8px;">{{ "Select a source from the list to auto-fill the form below"|t('docs-manager') }}</p>';
+
+            selectorContainer.innerHTML = html;
+
+            document.getElementById('discovered-sources').addEventListener('change', function() {
+                if (this.value) {
+                    const source = JSON.parse(this.value);
+                    populateForm(source);
+                }
+            });
+        }
+
+        function populateForm(source) {
+            document.getElementById('name').value = source.name || '';
+            document.getElementById('handle').value = source.handle || '';
+            document.getElementById('description').value = source.description || '';
+
+            if (source.kind) {
+                document.getElementById('kind').value = source.kind;
+            }
+            if (source.repositoryUrl) {
+                document.getElementById('repositoryUrl').value = source.repositoryUrl;
+            }
+            if (source.localPath) {
+                document.getElementById('localPath').value = source.localPath;
+            }
+
+            Craft.cp.displayNotice('{{ "Source details populated. Review and save."|t('docs-manager') }}');
+        }
+
+        sourceTypeSelect.addEventListener('change', loadAvailableSources);
+        kindSelect.addEventListener('change', loadAvailableSources);
+        loadAvailableSources();
+    {% endif %}
+{% endjs %}

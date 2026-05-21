@@ -1,0 +1,7 @@
+{
+    "plugin": {
+        "name": "Docs Manager",
+        "handle": "docs-manager",
+        "description": "Parse and sync documentation from markdown files to Craft CMS"
+    }
+}
