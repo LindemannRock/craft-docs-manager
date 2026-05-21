@@ -1,6 +1,6 @@
 # Changelog
 
-## [5.0.0](https://github.com/LindemannRock/craft-docs-manager/compare/v5.0.0...v5.0.0) (2026-05-21)
+## [5.0.0](https://github.com/LindemannRock/craft-docs-manager/compare/v5.0.0...v5.0.0) - 2026-05-21
 
 
 ### Added
