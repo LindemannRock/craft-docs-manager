@@ -12,6 +12,10 @@ use Craft;
 use craft\base\Model;
 use craft\behaviors\EnvAttributeParserBehavior;
 use craft\helpers\App;
+use lindemannrock\base\traits\DateFormatSettingsTrait;
+use lindemannrock\base\traits\ItemsPerPageSettingsTrait;
+use lindemannrock\base\traits\LogLevelSettingsTrait;
+use lindemannrock\base\traits\PluginNameSettingsTrait;
 use lindemannrock\base\traits\SettingsConfigTrait;
 use lindemannrock\base\traits\SettingsDisplayNameTrait;
 use lindemannrock\base\traits\SettingsPersistenceTrait;
@@ -26,7 +30,11 @@ use lindemannrock\logginglibrary\traits\LoggingTrait;
 class Settings extends Model
 {
     use CodeHighlighterTrait;
+    use DateFormatSettingsTrait;
+    use ItemsPerPageSettingsTrait;
+    use LogLevelSettingsTrait;
     use LoggingTrait;
+    use PluginNameSettingsTrait;
     use SettingsConfigTrait;
     use SettingsDisplayNameTrait;
     use SettingsPersistenceTrait;
@@ -35,11 +43,6 @@ class Settings extends Model
      * @var string Plugin display name
      */
     public string $pluginName = 'Docs Manager';
-
-    /**
-     * @var string Log level (debug, info, warning, error)
-     */
-    public string $logLevel = 'error';
 
     // Source Settings (Defaults for new plugins)
     /**
@@ -111,12 +114,6 @@ class Settings extends Model
      */
     public array $enabledSites = [];
 
-    // Display Settings
-    /**
-     * @var int Items per page in listing views
-     */
-    public int $itemsPerPage = 50;
-
     /**
      * Initialize the settings model
      */
@@ -147,15 +144,11 @@ class Settings extends Model
      */
     protected function defineRules(): array
     {
-        return [
-            [['pluginName'], 'required'],
-            [['pluginName', 'defaultSourceType', 'localPluginBasePath', 'githubToken', 'syncSchedule'], 'string'],
-            [['logLevel'], 'in', 'range' => ['debug', 'info', 'warning', 'error']],
-            [['logLevel'], 'validateLogLevel'],
+        return array_merge([
+            [['defaultSourceType', 'localPluginBasePath', 'githubToken', 'syncSchedule'], 'string'],
             [['defaultSourceType'], 'in', 'range' => ['local', 'github-api']],
             [['syncSchedule'], 'in', 'range' => ['hourly', 'daily', 'weekly', 'monthly']],
             [['autoSync', 'enableSyntaxHighlighting', 'enableAnchorGeneration', 'codeEnableCopyButton', 'codeShowLineNumbers'], 'boolean'],
-            [['itemsPerPage'], 'integer', 'min' => 10, 'max' => 500],
             [['codeTheme'], 'string', 'max' => 50],
             [['codeFontSize'], 'integer', 'min' => 8, 'max' => 32],
             [['codeFontFamily'], 'string', 'max' => 255],
@@ -163,39 +156,24 @@ class Settings extends Model
             [['enabledSites'], 'validateEnabledSites'],
             [['localPluginBasePath'], 'required', 'when' => fn(self $model): bool => $model->defaultSourceType === 'local'],
             [['localPluginBasePath'], 'validateLocalPluginBasePath'],
-        ];
+        ], $this->pluginNameSettingsRules(), $this->logLevelSettingsRules(), $this->dateFormatSettingsRules(), $this->itemsPerPageSettingsRules());
     }
 
     /**
-     * Validate log level - debug requires devMode
+     * Attribute labels for validation error messages.
+     *
+     * Trait helpers merge in `pluginName`, `logLevel`, `itemsPerPage`, and the 5
+     * date format labels — translated via `lindemannrock-base`. Other properties
+     * fall through to Yii's auto-generated English labels.
      */
-    public function validateLogLevel($attribute, $params, $validator)
+    public function attributeLabels(): array
     {
-        $logLevel = $this->$attribute;
-
-        // Reset session warning when devMode is true - allows warning to show again if devMode changes
-        if (Craft::$app->getConfig()->getGeneral()->devMode && !Craft::$app->getRequest()->getIsConsoleRequest()) {
-            Craft::$app->getSession()->remove('dm_debug_config_warning');
-        }
-
-        // Debug level is only allowed when devMode is enabled
-        if ($logLevel === 'debug' && !Craft::$app->getConfig()->getGeneral()->devMode) {
-            $this->$attribute = 'info';
-
-            if ($this->isOverriddenByConfig('logLevel')) {
-                if (!Craft::$app->getRequest()->getIsConsoleRequest()) {
-                    if (Craft::$app->getSession()->get('dm_debug_config_warning') === null) {
-                        $this->logWarning('Log level "debug" from config file changed to "info" because devMode is disabled. Please update your config/docs-manager.php file.');
-                        Craft::$app->getSession()->set('dm_debug_config_warning', true);
-                    }
-                } else {
-                    $this->logWarning('Log level "debug" from config file changed to "info" because devMode is disabled. Please update your config/docs-manager.php file.');
-                }
-            } else {
-                $this->logWarning('Log level automatically changed from "debug" to "info" because devMode is disabled');
-                $this->saveToDatabase();
-            }
-        }
+        return array_merge(
+            $this->pluginNameSettingsLabel(),
+            $this->logLevelSettingsLabel(),
+            $this->dateFormatSettingsLabels(),
+            $this->itemsPerPageSettingsLabel(),
+        );
     }
 
     /**
@@ -339,6 +317,7 @@ class Settings extends Model
             'enableAnchorGeneration',
             'codeEnableCopyButton',
             'codeShowLineNumbers',
+            'showSeconds',
         ];
     }
 
