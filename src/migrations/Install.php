@@ -295,7 +295,14 @@ class Install extends Migration
             'codeShowLineNumbers' => $this->boolean()->notNull()->defaultValue(true),
 
             // Display Settings
-            'itemsPerPage' => $this->integer()->notNull()->defaultValue(50),
+            'itemsPerPage' => $this->integer()->notNull()->defaultValue(100),
+
+            // Base plugin overrides (nullable — null = inherit from base config / defaults).
+            'timeFormat' => $this->string(2)->null(),
+            'monthFormat' => $this->string(20)->null(),
+            'dateOrder' => $this->string(3)->null(),
+            'dateSeparator' => $this->string(1)->null(),
+            'showSeconds' => $this->boolean()->null(),
         ]);
 
         // Insert default row
@@ -314,7 +321,13 @@ class Install extends Migration
             'codeFontFamily' => null,
             'codeEnableCopyButton' => true,
             'codeShowLineNumbers' => true,
-            'itemsPerPage' => 50,
+            'itemsPerPage' => 100,
+            // Base plugin overrides — seeded null so cascade falls through to base config / defaults.
+            'timeFormat' => null,
+            'monthFormat' => null,
+            'dateOrder' => null,
+            'dateSeparator' => null,
+            'showSeconds' => null,
             'dateCreated' => date('Y-m-d H:i:s'),
             'dateUpdated' => date('Y-m-d H:i:s'),
             'uid' => \Craft::$app->getSecurity()->generateRandomString(36),
