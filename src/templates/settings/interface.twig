@@ -28,21 +28,20 @@
 
         <h2 class="first">{{ "Interface Settings"|t('docs-manager') }}</h2>
 
-        {{ forms.textField({
-            label: "Items Per Page"|t('docs-manager'),
-            instructions: "Number of items to show per page in the Control Panel"|t('docs-manager'),
-            id: 'itemsPerPage',
-            name: 'settings[itemsPerPage]',
-            value: settings.itemsPerPage ?? 50,
-            type: 'number',
-            min: 10,
-            max: 500,
-            required: true,
-            disabled: settings.isOverriddenByConfig('itemsPerPage'),
-            warning: settings.isOverriddenByConfig('itemsPerPage') ?
-                "This is being overridden by the <code>itemsPerPage</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
-            errors: settings.getErrors('itemsPerPage')
-        }) }}
+        {% include 'lindemannrock-base/_partials/field-items-per-page' with {
+            settings: settings,
+            pluginHandle: 'docs-manager',
+        } only %}
+
+        <hr>
+
+        {% include 'lindemannrock-base/_partials/cascade-base-overrides' with {
+            settings: settings,
+            pluginHandle: 'docs-manager',
+            sections: {
+                dateFormat: {},
+            },
+        } only %}
 
     {% include 'docs-manager/_components/source-credit.twig' %}
 {% endblock %}

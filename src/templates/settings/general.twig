@@ -24,18 +24,10 @@
 
         <h2>{{ "General Settings"|t('docs-manager') }}</h2>
 
-        {{ forms.textField({
-            label: 'Plugin Name'|t('docs-manager'),
-            instructions: 'The name shown in the Control Panel'|t('docs-manager'),
-            id: 'pluginName',
-            name: 'settings[pluginName]',
-            value: settings.pluginName,
-            required: true,
-            disabled: settings.isOverriddenByConfig('pluginName'),
-            warning: settings.isOverriddenByConfig('pluginName') ?
-                "This is being overridden by the <code>pluginName</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
-            errors: settings.getErrors('pluginName')
-        }) }}
+        {% include 'lindemannrock-base/_partials/field-plugin-name' with {
+            settings: settings,
+            pluginHandle: 'docs-manager',
+        } only %}
 
         {% set siteOptions = [] %}
         {% for site in craft.app.sites.getAllSites() %}
@@ -111,30 +103,10 @@
 
         <h2>{{ "Logging Settings"|t('docs-manager') }}</h2>
 
-        {% set logOptions = [
-            {value: 'error', label: 'Error (Critical errors only)'|t('docs-manager')},
-            {value: 'warning', label: 'Warning (Errors and warnings)'|t('docs-manager')},
-            {value: 'info', label: 'Info (General information)'|t('docs-manager')},
-        ] %}
-
-        {% if craft.app.config.general.devMode %}
-            {% set logOptions = logOptions|merge([
-                {value: 'debug', label: 'Debug (Detailed debugging)'|t('docs-manager')}
-            ]) %}
-        {% endif %}
-
-        {{ forms.selectField({
-            label: 'Log Level'|t('docs-manager'),
-            instructions: 'Choose what types of messages to log. Debug level requires devMode to be enabled.'|t('docs-manager'),
-            id: 'logLevel',
-            name: 'settings[logLevel]',
-            value: settings.logLevel,
-            options: logOptions,
-            disabled: settings.isOverriddenByConfig('logLevel'),
-            warning: settings.isOverriddenByConfig('logLevel') ?
-                "This is being overridden by the <code>logLevel</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
-            errors: settings.getErrors('logLevel')
-        }) }}
+        {% include 'lindemannrock-base/_partials/field-log-level' with {
+            settings: settings,
+            pluginHandle: 'docs-manager',
+        } only %}
 
     {% include 'docs-manager/_components/source-credit.twig' %}
 {% endblock %}
