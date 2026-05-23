@@ -199,6 +199,15 @@ class SettingsController extends Controller
 
         foreach ($settingsData as $key => $value) {
             if (!$settings->isOverriddenByConfig($key) && property_exists($settings, $key)) {
+                // Multi-state selects (e.g. "Use global default" = '') need '' → null
+                // so nullable properties hold null, not a coerced false / 0.
+                if ($value === '') {
+                    $type = (new \ReflectionProperty($settings, $key))->getType();
+                    if ($type instanceof \ReflectionNamedType && $type->allowsNull()) {
+                        $value = null;
+                    }
+                }
+
                 $setterMethod = 'set' . ucfirst($key);
                 if (method_exists($settings, $setterMethod)) {
                     $settings->$setterMethod($value);
@@ -265,7 +274,14 @@ class SettingsController extends Controller
                 'githubToken',
                 'logLevel',
             ],
-            'interface' => ['itemsPerPage'],
+            'interface' => [
+                'itemsPerPage',
+                'timeFormat',
+                'monthFormat',
+                'dateOrder',
+                'dateSeparator',
+                'showSeconds',
+            ],
             'frontend' => [
                 'enableSyntaxHighlighting',
                 'codeTheme',
