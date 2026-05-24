@@ -251,16 +251,16 @@
             </div>
             <div class="data">
                 <dt class="heading">{{ "Created at"|t('app') }}</dt>
-                <dd class="value">{{ source.dateCreated|lrDatetime('short') }}</dd>
+                <dd class="value">{{ source.dateCreated|lrDatetime }}</dd>
             </div>
             <div class="data">
                 <dt class="heading">{{ "Updated at"|t('app') }}</dt>
-                <dd class="value">{{ source.dateUpdated|lrDatetime('short') }}</dd>
+                <dd class="value">{{ source.dateUpdated|lrDatetime }}</dd>
             </div>
             {% if source.lastSyncedAt %}
                 <div class="data">
                     <dt class="heading">{{ "Last Synced"|t('docs-manager') }}</dt>
-                    <dd class="value">{{ source.lastSyncedAt|lrDatetime('short') }}</dd>
+                    <dd class="value">{{ source.lastSyncedAt|lrDatetime }}</dd>
                 </div>
             {% endif %}
         </dl>

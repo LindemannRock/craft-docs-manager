@@ -158,7 +158,7 @@
 	{# Last Synced #}
 	<td data-column="lastSyncedAt">
 		{% if item.lastSyncedAt %}
-			{{ item.lastSyncedAt|lrDatetime('short') }}
+			{{ item.lastSyncedAt|lrDatetime }}
 		{% else %}
 			<span class="light">--</span>
 		{% endif %}
