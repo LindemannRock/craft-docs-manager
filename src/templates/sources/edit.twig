@@ -238,7 +238,7 @@
                 <dd class="value">
                     {% if source.enabled %}
                         <span class="status live"></span>
-                        <span>{{ 'Live'|t('app') }}</span>
+                        <span>{{ 'Enabled'|t('app') }}</span>
                     {% else %}
                         <span class="status disabled"></span>
                         <span>{{ 'Disabled'|t('app') }}</span>
@@ -249,6 +249,12 @@
                 <dt class="heading">{{ "Pages"|t('docs-manager') }}</dt>
                 <dd class="value">{{ craft.docsManager.getPages(source.handle)|length }}</dd>
             </div>
+            {% if source.lastSyncedAt %}
+                <div class="data">
+                    <dt class="heading">{{ "Last Synced"|t('docs-manager') }}</dt>
+                    <dd class="value">{{ source.lastSyncedAt|lrDatetime }}</dd>
+                </div>
+            {% endif %}
             <div class="data">
                 <dt class="heading">{{ "Created at"|t('app') }}</dt>
                 <dd class="value">{{ source.dateCreated|lrDatetime }}</dd>
@@ -257,12 +263,6 @@
                 <dt class="heading">{{ "Updated at"|t('app') }}</dt>
                 <dd class="value">{{ source.dateUpdated|lrDatetime }}</dd>
             </div>
-            {% if source.lastSyncedAt %}
-                <div class="data">
-                    <dt class="heading">{{ "Last Synced"|t('docs-manager') }}</dt>
-                    <dd class="value">{{ source.lastSyncedAt|lrDatetime }}</dd>
-                </div>
-            {% endif %}
         </dl>
     {% endif %}
 {% endblock %}
