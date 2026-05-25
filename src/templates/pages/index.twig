@@ -1,22 +1,23 @@
+{#
+ # Pages Index — Using cp-table layout
+ #
+ # Follows the canonical CP table index-page pattern (in-memory variant) —
+ # see plugins/base/docs/template-guides/cp-table-index-pattern.md.
+ # PagesController::actionIndex() owns query-param parsing, allowlist
+ # validation, filter, sort, and pagination. This template stays
+ # presentational and renders the already-sliced `pages` plus the
+ # filter/sort state handed in. Permission booleans (`canCreate`, `canEdit`,
+ # `canDelete`, `canManage`) likewise arrive from the controller.
+ #
+ # @link      https://lindemannrock.com
+ # @copyright Copyright (c) 2026 LindemannRock
+ #}
+
 {% extends 'lindemannrock-base/_layouts/cp-table' %}
 
 {% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
-{% set settings = plugin.getSettings() %}
 
-{# Get query parameters #}
-{% set search = craft.app.request.getParam('search', '') %}
-{% set statusFilter = craft.app.request.getParam('status', 'all') %}
-{% set typeFilter = craft.app.request.getParam('type', 'all') %}
-{% set sort = craft.app.request.getParam('sort', 'title') %}
-{% set dir = craft.app.request.getParam('dir', 'asc') %}
-{% set page = craft.app.request.getParam('page', 1)|number_format(0, '', '') %}
-{% set limit = settings.itemsPerPage %}
-{% set offset = (page - 1) * limit %}
-
-{# Permission checks #}
-{% set canManage = currentUser.can('docsManager:managePages') %}
-
-{# Build source lookup map for efficient name resolution #}
+{# Build source lookup map for efficient name resolution in the row block. #}
 {% set sourceMap = {} %}
 {% for sourceRecord in sourceRecords %}
 	{% set sourceMap = sourceMap|merge({ (sourceRecord.id): sourceRecord }) %}
@@ -37,43 +38,6 @@
 
 {# Determine selected sidebar item #}
 {% set selectedSidebar = selectedSourceId ? ('source-' ~ selectedSourceId) : 'all' %}
-
-{# Filter pages based on filters #}
-{% set filteredPages = pages %}
-
-{# Status filter #}
-{% if statusFilter == 'enabled' %}
-	{% set filteredPages = filteredPages|filter(p => p.enabled) %}
-{% elseif statusFilter == 'disabled' %}
-	{% set filteredPages = filteredPages|filter(p => not p.enabled) %}
-{% endif %}
-
-{# Type filter #}
-{% if typeFilter != 'all' %}
-	{% set filteredPages = filteredPages|filter(p => p.pageType == typeFilter) %}
-{% endif %}
-
-{# Search filter #}
-{% if search %}
-	{% set filteredPages = filteredPages|filter(p => search|lower in p.title|lower or search|lower in (p.slug ?? '')|lower) %}
-{% endif %}
-
-{# Sort #}
-{% if sort == 'title' %}
-	{% set filteredPages = dir == 'asc' ? filteredPages|sort((a, b) => a.title|lower <=> b.title|lower) : filteredPages|sort((a, b) => b.title|lower <=> a.title|lower) %}
-{% elseif sort == 'source' %}
-	{% set filteredPages = dir == 'asc' ? filteredPages|sort((a, b) => (sourceMap[a.sourceId].name ?? '')|lower <=> (sourceMap[b.sourceId].name ?? '')|lower) : filteredPages|sort((a, b) => (sourceMap[b.sourceId].name ?? '')|lower <=> (sourceMap[a.sourceId].name ?? '')|lower) %}
-{% elseif sort == 'pageType' %}
-	{% set filteredPages = dir == 'asc' ? filteredPages|sort((a, b) => a.pageType|lower <=> b.pageType|lower) : filteredPages|sort((a, b) => b.pageType|lower <=> a.pageType|lower) %}
-{% elseif sort == 'slug' %}
-	{% set filteredPages = dir == 'asc' ? filteredPages|sort((a, b) => (a.slug ?? '')|lower <=> (b.slug ?? '')|lower) : filteredPages|sort((a, b) => (b.slug ?? '')|lower <=> (a.slug ?? '')|lower) %}
-{% elseif sort == 'enabled' %}
-	{% set filteredPages = dir == 'asc' ? filteredPages|sort((a, b) => a.enabled <=> b.enabled) : filteredPages|sort((a, b) => b.enabled <=> a.enabled) %}
-{% endif %}
-
-{# Pagination #}
-{% set totalCount = filteredPages|length %}
-{% set paginatedItems = filteredPages|slice(offset, limit) %}
 
 {# Page type labels for display #}
 {% set pageTypeLabels = {
@@ -179,7 +143,7 @@
 			{key: 'slug', label: 'Slug'|t('docs-manager'), sortable: true, hideable: true},
 			{key: 'enabled', label: 'Status'|t('docs-manager'), sortable: true, hideable: true},
 		],
-		items: paginatedItems,
+		items: pages,
 		emptyMessage: 'No custom pages found.'|t('docs-manager'),
 	},
 	pagination: {
@@ -189,15 +153,14 @@
 		itemLabel: {singular: 'page'|t('docs-manager'), plural: 'pages'|t('docs-manager')},
 	},
 	checkboxes: canManage,
-	newButton: selectedSourceId ? {
+	newButton: (selectedSourceId and canCreate) ? {
 		url: url('docs-manager/pages/new/' ~ selectedSourceId),
 		label: 'New Page'|t('docs-manager'),
-		permission: 'docsManager:createPages',
-	} : false,
+	} : null,
 } %}
 
 {% block toolbarActions %}
-	{% if not selectedSourceId and canManage and sourceRecords|length %}
+	{% if not selectedSourceId and canCreate and sourceRecords|length %}
 		<div class="btngroup submit">
 			<button type="button" class="btn submit add icon menubtn">{{ 'New Page'|t('docs-manager') }}</button>
 			<div class="menu">
@@ -259,20 +222,23 @@
 {% block rowActions %}
 	{% set actionItems = [] %}
 
-	{% if canManage %}
+	{% if canEdit %}
 		{% set actionItems = actionItems|merge([{
 			label: 'Edit'|t('docs-manager'),
 			url: url('docs-manager/pages/' ~ item.id),
 		}]) %}
-		{% set actionItems = actionItems|merge([
-			{type: 'divider'},
-			{
-				label: 'Delete'|t('docs-manager'),
-				class: 'error',
-				jsAction: 'delete',
-				data: {name: item.title},
-			},
-		]) %}
+	{% endif %}
+
+	{% if canDelete %}
+		{% if actionItems|length %}
+			{% set actionItems = actionItems|merge([{type: 'divider'}]) %}
+		{% endif %}
+		{% set actionItems = actionItems|merge([{
+			label: 'Delete'|t('docs-manager'),
+			class: 'error',
+			jsAction: 'delete',
+			data: {name: item.title},
+		}]) %}
 	{% endif %}
 
 	{% if actionItems|length > 0 %}
@@ -289,17 +255,20 @@
 {% endblock %}
 
 {% block bulkActions %}
-	{% if canManage %}
-		<button type="button" class="btn menubtn secondary" id="lr-bulk-status-btn">
-			{{ 'Set status'|t('docs-manager') }}
-		</button>
-		<div class="menu">
-			<ul>
-				<li><a id="lr-bulk-enable-action">{{ 'Enable'|t('docs-manager') }}</a></li>
-				<li><a id="lr-bulk-disable-action">{{ 'Disable'|t('docs-manager') }}</a></li>
-			</ul>
+	{% if canEdit %}
+		<div class="btngroup">
+			<button type="button" class="btn menubtn secondary" id="lr-bulk-status-btn">
+				{{ 'Set status'|t('docs-manager') }}
+			</button>
+			<div class="menu">
+				<ul>
+					<li><a id="lr-bulk-enable-action">{{ 'Enable'|t('docs-manager') }}</a></li>
+					<li><a id="lr-bulk-disable-action">{{ 'Disable'|t('docs-manager') }}</a></li>
+				</ul>
+			</div>
 		</div>
-
+	{% endif %}
+	{% if canDelete %}
 		<button type="button" class="btn secondary" id="lr-bulk-delete-btn">
 			{{ 'Delete'|t('docs-manager') }} (<span id="lr-selected-count">0</span>)
 		</button>
@@ -309,115 +278,122 @@
 {% block scripts %}
 <script>
 (function() {
-	// Initialize "New Page" source dropdown menu
+	if (typeof Craft === 'undefined') return;
+
+	// Initialise the "New Page" source-picker menubtn (when no source is selected).
 	document.querySelectorAll('.btngroup.submit .menubtn').forEach(function(btn) {
-		if (typeof Craft !== 'undefined' && Craft.MenuBtn) {
+		if (Craft.MenuBtn) {
 			new Craft.MenuBtn(btn);
 		}
 	});
 
-	// Initialize bulk status menu
+	// Initialise the "Set status" bulk menubtn.
 	const bulkStatusBtn = document.getElementById('lr-bulk-status-btn');
-	if (bulkStatusBtn && typeof Craft !== 'undefined' && Craft.MenuBtn) {
+	if (bulkStatusBtn && Craft.MenuBtn) {
 		new Craft.MenuBtn(bulkStatusBtn);
 	}
 
-	// Bulk enable
-	document.getElementById('lr-bulk-enable-action')?.addEventListener('click', function(e) {
-		e.preventDefault();
-		const ids = window.lrTableSelection.getSelectedIds();
-		if (ids.length === 0) return;
+	// Pre-translated strings: keep |t() in Twig and emit as JSON-encoded JS
+	// literals via |json_encode|raw — avoids the |e('js') trap.
+	const T = {
+		deleteConfirmTemplate: {{ 'Delete page "{name}"? This cannot be undone.'|t('docs-manager')|json_encode|raw }},
+		pageDeleted: {{ 'Page deleted'|t('docs-manager')|json_encode|raw }},
+		failedToDeletePage: {{ 'Failed to delete page'|t('docs-manager')|json_encode|raw }},
+		bulkEnabledTemplate: {{ 'Enabled {count} pages'|t('docs-manager')|json_encode|raw }},
+		bulkEnableFailed: {{ 'Failed to enable pages'|t('docs-manager')|json_encode|raw }},
+		bulkDisabledTemplate: {{ 'Disabled {count} pages'|t('docs-manager')|json_encode|raw }},
+		bulkDisableFailed: {{ 'Failed to disable pages'|t('docs-manager')|json_encode|raw }},
+		bulkDeletedTemplate: {{ 'Deleted {count} pages'|t('docs-manager')|json_encode|raw }},
+		bulkDeleteFailed: {{ 'Failed to delete pages'|t('docs-manager')|json_encode|raw }},
+		bulkDeleteConfirmTemplate: {{ 'Delete {count} page(s)? This cannot be undone.'|t('docs-manager')|json_encode|raw }},
+	};
 
-		Craft.sendActionRequest('POST', 'docs-manager/pages/bulk-enable', {
-			data: { pageIds: ids }
+	function selectedIds() {
+		return window.lrTableSelection ? window.lrTableSelection.getSelectedIds() : [];
+	}
+
+	// ---------------------------------------------------------------------
+	// Row-action handlers. Delegated listener on `document`, narrowed by
+	// `a[data-action]` + an explicit action-name allowlist. preventDefault
+	// only after the match — leaves unrelated `data-action` elements alone.
+	// See cp-table-index-pattern.md.
+	// ---------------------------------------------------------------------
+	document.addEventListener('click', function(e) {
+		const trigger = e.target.closest('a[data-action]');
+		if (!trigger) return;
+
+		const action = trigger.dataset.action;
+		if (action !== 'delete') return;
+
+		const id = trigger.dataset.id;
+		const name = trigger.dataset.name || '';
+		if (!id) return;
+		e.preventDefault();
+
+		if (!confirm(T.deleteConfirmTemplate.replace('{name}', name))) return;
+
+		Craft.sendActionRequest('POST', 'docs-manager/pages/delete', {
+			data: { pageId: id },
 		}).then(function(response) {
 			if (response.data.success) {
-				Craft.cp.displayNotice(Craft.t('docs-manager', 'Enabled {count} page(s)', {count: response.data.count}));
-				setTimeout(() => window.location.reload(), 1000);
+				Craft.cp.displayNotice(T.pageDeleted);
+				setTimeout(function() { window.location.reload(); }, 1000);
+			} else {
+				Craft.cp.displayError(response.data.error || T.failedToDeletePage);
 			}
 		}).catch(function() {
-			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to enable pages'));
+			Craft.cp.displayError(T.failedToDeletePage);
 		});
 	});
 
-	// Bulk disable
+	// ---------------------------------------------------------------------
+	// Bulk actions. Each posts the selected IDs to its endpoint; the
+	// controller returns `count` (rows successfully changed) plus an
+	// optional `errors` array for per-row failures.
+	// ---------------------------------------------------------------------
+	function runBulkStatus(endpoint, successTemplate, errorFallback) {
+		const ids = selectedIds();
+		if (!ids.length) return;
+		Craft.sendActionRequest('POST', endpoint, {
+			data: { pageIds: ids },
+		}).then(function(response) {
+			const count = response.data.count || 0;
+			if (count > 0) {
+				Craft.cp.displayNotice(successTemplate.replace('{count}', count));
+			}
+			if (Array.isArray(response.data.errors)) {
+				response.data.errors.forEach(function(err) { Craft.cp.displayError(err); });
+			}
+			if (count > 0 && (!Array.isArray(response.data.errors) || response.data.errors.length === 0)) {
+				setTimeout(function() { window.location.reload(); }, 1000);
+			}
+		}).catch(function() {
+			Craft.cp.displayError(errorFallback);
+		});
+	}
+
+	document.getElementById('lr-bulk-enable-action')?.addEventListener('click', function(e) {
+		e.preventDefault();
+		runBulkStatus('docs-manager/pages/bulk-enable', T.bulkEnabledTemplate, T.bulkEnableFailed);
+	});
+
 	document.getElementById('lr-bulk-disable-action')?.addEventListener('click', function(e) {
 		e.preventDefault();
-		const ids = window.lrTableSelection.getSelectedIds();
-		if (ids.length === 0) return;
-
-		Craft.sendActionRequest('POST', 'docs-manager/pages/bulk-disable', {
-			data: { pageIds: ids }
-		}).then(function(response) {
-			if (response.data.count > 0) {
-				Craft.cp.displayNotice(Craft.t('docs-manager', 'Disabled {count} page(s)', {count: response.data.count}));
-			}
-			if (response.data.errors && response.data.errors.length > 0) {
-				response.data.errors.forEach(err => Craft.cp.displayError(err));
-			}
-			if (response.data.count > 0 && (!response.data.errors || response.data.errors.length === 0)) {
-				setTimeout(() => window.location.reload(), 1000);
-			}
-		}).catch(function() {
-			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to disable pages'));
-		});
+		runBulkStatus('docs-manager/pages/bulk-disable', T.bulkDisabledTemplate, T.bulkDisableFailed);
 	});
 
-	// Bulk delete
 	document.getElementById('lr-bulk-delete-btn')?.addEventListener('click', function() {
-		const ids = window.lrTableSelection.getSelectedIds();
-		if (ids.length === 0) return;
-
-		if (!confirm(Craft.t('docs-manager', 'Delete {count} page(s)? This cannot be undone.', {count: ids.length}))) return;
-
-		Craft.sendActionRequest('POST', 'docs-manager/pages/bulk-delete', {
-			data: { pageIds: ids }
-		}).then(function(response) {
-			if (response.data.count > 0) {
-				Craft.cp.displayNotice(Craft.t('docs-manager', 'Deleted {count} page(s)', {count: response.data.count}));
-			}
-			if (response.data.errors && response.data.errors.length > 0) {
-				response.data.errors.forEach(err => Craft.cp.displayError(err));
-			}
-			if (response.data.count > 0 && (!response.data.errors || response.data.errors.length === 0)) {
-				setTimeout(() => window.location.reload(), 1000);
-			}
-		}).catch(function() {
-			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to delete pages'));
-		});
-	});
-
-	// Individual delete action
-	document.querySelectorAll('[data-action="delete"]').forEach(function(btn) {
-		btn.addEventListener('click', function(e) {
-			e.preventDefault();
-			const id = this.dataset.id;
-			const name = this.dataset.name || '';
-
-			if (!id) return;
-
-			if (!confirm(Craft.t('docs-manager', 'Delete page "{name}"? This cannot be undone.', {name: name}))) return;
-
-			Craft.sendActionRequest('POST', 'docs-manager/pages/delete', {
-				data: { pageId: id }
-			}).then(function(response) {
-				if (response.data.success) {
-					Craft.cp.displayNotice(Craft.t('docs-manager', 'Page deleted'));
-					setTimeout(() => window.location.reload(), 1000);
-				} else {
-					Craft.cp.displayError(response.data.error || Craft.t('docs-manager', 'Failed to delete page'));
-				}
-			}).catch(function() {
-				Craft.cp.displayError(Craft.t('docs-manager', 'Failed to delete page'));
-			});
-		});
+		const ids = selectedIds();
+		if (!ids.length) return;
+		if (!confirm(T.bulkDeleteConfirmTemplate.replace('{count}', ids.length))) return;
+		runBulkStatus('docs-manager/pages/bulk-delete', T.bulkDeletedTemplate, T.bulkDeleteFailed);
 	});
 
 	// Update selected count
 	document.addEventListener('lr:selectionChanged', function(e) {
 		const countSpan = document.getElementById('lr-selected-count');
 		if (countSpan) {
-			countSpan.textContent = e.detail.count;
+			countSpan.textContent = (e.detail && typeof e.detail.count === 'number') ? e.detail.count : 0;
 		}
 	});
 })();

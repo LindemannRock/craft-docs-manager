@@ -1,17 +1,21 @@
+{#
+ # Sources Index — Using cp-table layout
+ #
+ # Follows the canonical CP table index-page pattern (in-memory variant) —
+ # see plugins/base/docs/template-guides/cp-table-index-pattern.md.
+ # SourcesController::actionIndex() owns query-param parsing, allowlist
+ # validation, filter, sort, and pagination. This template stays
+ # presentational and renders the already-sliced `sources` plus the
+ # filter/sort state handed in. Permission booleans (`canCreate`, `canEdit`,
+ # `canDelete`, `canManage`) likewise arrive from the controller.
+ #
+ # @link      https://lindemannrock.com
+ # @copyright Copyright (c) 2026 LindemannRock
+ #}
+
 {% extends 'lindemannrock-base/_layouts/cp-table' %}
 
 {% set plugin = craft.app.plugins.getPlugin('docs-manager') %}
-{% set settings = plugin.getSettings() %}
-
-{# Get query parameters #}
-{% set search = craft.app.request.getParam('search', '') %}
-{% set statusFilter = craft.app.request.getParam('status', 'all') %}
-{% set kindFilter = craft.app.request.getParam('kind', 'all') %}
-{% set sort = craft.app.request.getParam('sort', 'name') %}
-{% set dir = craft.app.request.getParam('dir', 'asc') %}
-
-{# Permission checks #}
-{% set canManage = currentUser.can('docsManager:manageSources') %}
 
 {# Site crumb for multi-site #}
 {% set siteCrumbs = [] %}
@@ -97,8 +101,8 @@
 			{key: 'name', label: 'Name'|t('docs-manager'), sortable: true},
 			{key: 'handle', label: 'Handle'|t('docs-manager'), sortable: true, hideable: true},
 			{key: 'kind', label: 'Doc Type'|t('docs-manager'), sortable: true, hideable: true},
-			{key: 'currentVersion', label: 'Version'|t('docs-manager'), hideable: true},
-			{key: 'pages', label: 'Pages'|t('docs-manager'), hideable: true},
+			{key: 'currentVersion', label: 'Version'|t('docs-manager'), sortable: true, hideable: true},
+			{key: 'pages', label: 'Pages'|t('docs-manager'), sortable: true, hideable: true},
 			{key: 'lastSyncedAt', label: 'Last Synced'|t('docs-manager'), sortable: true, hideable: true},
 			{key: 'enabled', label: 'Status'|t('docs-manager'), sortable: true, hideable: true},
 		],
@@ -112,15 +116,16 @@
 		itemLabel: {singular: 'source'|t('docs-manager'), plural: 'sources'|t('docs-manager')},
 	},
 	checkboxes: canManage,
-	newButton: {
+	newButton: canCreate ? {
 		url: url('docs-manager/sources/new'),
 		label: 'New Source'|t('docs-manager'),
-		permission: 'docsManager:createSources',
-	},
+	} : null,
 } %}
 
 {% block toolbarActions %}
-	<button type="button" class="btn" id="sync-all-btn">{{ 'Sync All'|t('docs-manager') }}</button>
+	{% if canEdit %}
+		<button type="button" class="btn" id="sync-all-btn">{{ 'Sync All'|t('docs-manager') }}</button>
+	{% endif %}
 {% endblock %}
 
 {% block tableRow %}
@@ -150,9 +155,11 @@
 		{{ item.currentVersion ?? '--' }}
 	</td>
 
-	{# Pages #}
+	{# Pages — pre-computed in the controller via a single GROUP BY query
+	   (was N+1: `craft.docsManager.getPages(item.handle)|length` ran a
+	   fresh element query per visible row). #}
 	<td data-column="pages">
-		{{ craft.docsManager.getPages(item.handle)|length }}
+		{{ pageCounts[item.id] ?? 0 }}
 	</td>
 
 	{# Last Synced #}
@@ -187,7 +194,7 @@
 		},
 	] %}
 
-	{% if canManage %}
+	{% if canDelete %}
 		{% set actionItems = actionItems|merge([
 			{type: 'divider'},
 			{
@@ -211,17 +218,20 @@
 {% endblock %}
 
 {% block bulkActions %}
-	{% if canManage %}
-		<button type="button" class="btn menubtn secondary" id="lr-bulk-status-btn">
-			{{ 'Set status'|t('docs-manager') }}
-		</button>
-		<div class="menu">
-			<ul>
-				<li><a id="lr-bulk-enable-action">{{ 'Enable'|t('docs-manager') }}</a></li>
-				<li><a id="lr-bulk-disable-action">{{ 'Disable'|t('docs-manager') }}</a></li>
-			</ul>
+	{% if canEdit %}
+		<div class="btngroup">
+			<button type="button" class="btn menubtn secondary" id="lr-bulk-status-btn">
+				{{ 'Set status'|t('docs-manager') }}
+			</button>
+			<div class="menu">
+				<ul>
+					<li><a id="lr-bulk-enable-action">{{ 'Enable'|t('docs-manager') }}</a></li>
+					<li><a id="lr-bulk-disable-action">{{ 'Disable'|t('docs-manager') }}</a></li>
+				</ul>
+			</div>
 		</div>
-
+	{% endif %}
+	{% if canDelete %}
 		<button type="button" class="btn secondary" id="lr-bulk-delete-btn">
 			{{ 'Delete'|t('docs-manager') }} (<span id="lr-selected-count">0</span>)
 		</button>
@@ -231,22 +241,50 @@
 {% block scripts %}
 <script>
 (function() {
-	// Initialize bulk status menu
+	if (typeof Craft === 'undefined') return;
+
+	// Initialise the "Set status" menubtn — without `new Craft.MenuBtn(...)`
+	// the menu items inside are unreachable.
 	const bulkStatusBtn = document.getElementById('lr-bulk-status-btn');
-	if (bulkStatusBtn && typeof Craft !== 'undefined' && Craft.MenuBtn) {
+	if (bulkStatusBtn && Craft.MenuBtn) {
 		new Craft.MenuBtn(bulkStatusBtn);
 	}
 
-	// Sync All button
+	// Pre-translated strings: keep |t() in Twig and emit as JSON-encoded JS
+	// literals via |json_encode|raw — avoids the |e('js') trap.
+	const T = {
+		syncAllConfirm: {{ 'Sync all enabled sources? This may take a while.'|t('docs-manager')|json_encode|raw }},
+		syncing: {{ 'Syncing...'|t('docs-manager')|json_encode|raw }},
+		syncAllSuccess: {{ 'All sources synced successfully'|t('docs-manager')|json_encode|raw }},
+		syncAllPartial: {{ 'Some sources failed to sync'|t('docs-manager')|json_encode|raw }},
+		syncAllFailed: {{ 'Failed to sync sources'|t('docs-manager')|json_encode|raw }},
+		sourceSyncedTemplate: {{ 'Source "{name}" synced'|t('docs-manager')|json_encode|raw }},
+		syncFailed: {{ 'Sync failed'|t('docs-manager')|json_encode|raw }},
+		failedToSyncSource: {{ 'Failed to sync source'|t('docs-manager')|json_encode|raw }},
+		deleteConfirmTemplate: {{ 'Delete source "{name}"? This cannot be undone.'|t('docs-manager')|json_encode|raw }},
+		sourceDeleted: {{ 'Source deleted'|t('docs-manager')|json_encode|raw }},
+		failedToDeleteSource: {{ 'Failed to delete source'|t('docs-manager')|json_encode|raw }},
+		bulkEnabledTemplate: {{ 'Enabled {count} sources'|t('docs-manager')|json_encode|raw }},
+		bulkEnableFailed: {{ 'Failed to enable sources'|t('docs-manager')|json_encode|raw }},
+		bulkDisabledTemplate: {{ 'Disabled {count} sources'|t('docs-manager')|json_encode|raw }},
+		bulkDisableFailed: {{ 'Failed to disable sources'|t('docs-manager')|json_encode|raw }},
+		bulkDeletedTemplate: {{ 'Deleted {count} sources'|t('docs-manager')|json_encode|raw }},
+		bulkDeleteFailed: {{ 'Failed to delete sources'|t('docs-manager')|json_encode|raw }},
+		bulkDeleteConfirmTemplate: {{ 'Delete {count} source(s)? This cannot be undone.'|t('docs-manager')|json_encode|raw }},
+	};
+
+	function selectedIds() {
+		return window.lrTableSelection ? window.lrTableSelection.getSelectedIds() : [];
+	}
+
+	// Sync All toolbar button.
 	document.getElementById('sync-all-btn')?.addEventListener('click', function() {
-		if (!confirm(Craft.t('docs-manager', 'Sync all enabled sources? This may take a while.'))) {
-			return;
-		}
+		if (!confirm(T.syncAllConfirm)) return;
 
 		const btn = this;
 		const originalText = btn.textContent;
 		btn.disabled = true;
-		btn.textContent = Craft.t('docs-manager', 'Syncing...');
+		btn.textContent = T.syncing;
 
 		Craft.sendActionRequest('POST', 'docs-manager/sources/sync-all')
 			.then(function(response) {
@@ -254,119 +292,109 @@
 				btn.textContent = originalText;
 
 				if (response.data.success) {
-					Craft.cp.displayNotice(Craft.t('docs-manager', 'All sources synced successfully'));
-					setTimeout(() => window.location.reload(), 1000);
+					Craft.cp.displayNotice(T.syncAllSuccess);
+					setTimeout(function() { window.location.reload(); }, 1000);
 				} else {
-					Craft.cp.displayError(Craft.t('docs-manager', 'Some sources failed to sync'));
+					Craft.cp.displayError(T.syncAllPartial);
 				}
 			})
 			.catch(function() {
 				btn.disabled = false;
 				btn.textContent = originalText;
-				Craft.cp.displayError(Craft.t('docs-manager', 'Failed to sync sources'));
+				Craft.cp.displayError(T.syncAllFailed);
 			});
 	});
 
-	// Bulk enable
+	// ---------------------------------------------------------------------
+	// Row-action handlers. Delegated listener on `document`, narrowed by
+	// `a[data-action]` + an explicit action-name allowlist. preventDefault
+	// only after the match — leaves unrelated `data-action` elements alone.
+	// See cp-table-index-pattern.md.
+	// ---------------------------------------------------------------------
+	document.addEventListener('click', function(e) {
+		const trigger = e.target.closest('a[data-action]');
+		if (!trigger) return;
+
+		const action = trigger.dataset.action;
+		if (action !== 'sync' && action !== 'delete') return;
+
+		const id = trigger.dataset.id;
+		const name = trigger.dataset.name || '';
+		if (!id) return;
+		e.preventDefault();
+
+		if (action === 'sync') {
+			Craft.sendActionRequest('POST', 'docs-manager/sources/sync', {
+				data: { sourceId: id },
+			}).then(function(response) {
+				if (response.data.success) {
+					Craft.cp.displayNotice(T.sourceSyncedTemplate.replace('{name}', name));
+					setTimeout(function() { window.location.reload(); }, 1000);
+				} else {
+					Craft.cp.displayError(response.data.error || T.syncFailed);
+				}
+			}).catch(function() {
+				Craft.cp.displayError(T.failedToSyncSource);
+			});
+		} else if (action === 'delete') {
+			if (!confirm(T.deleteConfirmTemplate.replace('{name}', name))) return;
+			Craft.sendActionRequest('POST', 'docs-manager/sources/delete', {
+				data: { sourceId: id },
+			}).then(function(response) {
+				if (response.data && response.data.success !== false) {
+					Craft.cp.displayNotice(T.sourceDeleted);
+					setTimeout(function() { window.location.reload(); }, 1000);
+				} else {
+					Craft.cp.displayError(response.data.error || T.failedToDeleteSource);
+				}
+			}).catch(function() {
+				Craft.cp.displayError(T.failedToDeleteSource);
+			});
+		}
+	});
+
+	// ---------------------------------------------------------------------
+	// Bulk actions. Each posts the selected IDs to its endpoint; the
+	// controller returns `count` (rows successfully changed).
+	// ---------------------------------------------------------------------
+	function runBulkStatus(endpoint, successTemplate, errorFallback) {
+		const ids = selectedIds();
+		if (!ids.length) return;
+		Craft.sendActionRequest('POST', endpoint, {
+			data: { sourceIds: ids },
+		}).then(function(response) {
+			const count = response.data.count || 0;
+			if (count > 0) {
+				Craft.cp.displayNotice(successTemplate.replace('{count}', count));
+				setTimeout(function() { window.location.reload(); }, 1000);
+			}
+		}).catch(function() {
+			Craft.cp.displayError(errorFallback);
+		});
+	}
+
 	document.getElementById('lr-bulk-enable-action')?.addEventListener('click', function(e) {
 		e.preventDefault();
-		const ids = window.lrTableSelection.getSelectedIds();
-		if (ids.length === 0) return;
-
-		Craft.sendActionRequest('POST', 'docs-manager/sources/bulk-enable', {
-			data: { sourceIds: ids }
-		}).then(function(response) {
-			if (response.data.success) {
-				Craft.cp.displayNotice(Craft.t('docs-manager', 'Sources enabled'));
-				setTimeout(() => window.location.reload(), 1000);
-			}
-		}).catch(function() {
-			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to enable sources'));
-		});
+		runBulkStatus('docs-manager/sources/bulk-enable', T.bulkEnabledTemplate, T.bulkEnableFailed);
 	});
 
-	// Bulk disable
 	document.getElementById('lr-bulk-disable-action')?.addEventListener('click', function(e) {
 		e.preventDefault();
-		const ids = window.lrTableSelection.getSelectedIds();
-		if (ids.length === 0) return;
-
-		Craft.sendActionRequest('POST', 'docs-manager/sources/bulk-disable', {
-			data: { sourceIds: ids }
-		}).then(function(response) {
-			if (response.data.success) {
-				Craft.cp.displayNotice(Craft.t('docs-manager', 'Sources disabled'));
-				setTimeout(() => window.location.reload(), 1000);
-			}
-		}).catch(function() {
-			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to disable sources'));
-		});
+		runBulkStatus('docs-manager/sources/bulk-disable', T.bulkDisabledTemplate, T.bulkDisableFailed);
 	});
 
-	// Bulk delete
 	document.getElementById('lr-bulk-delete-btn')?.addEventListener('click', function() {
-		const ids = window.lrTableSelection.getSelectedIds();
-		if (ids.length === 0) return;
-
-		if (!confirm(Craft.t('docs-manager', 'Delete {count} source(s)? This cannot be undone.', {count: ids.length}))) return;
-
-		Craft.sendActionRequest('POST', 'docs-manager/sources/bulk-delete', {
-			data: { sourceIds: ids }
-		}).then(function(response) {
-			if (response.data.success) {
-				Craft.cp.displayNotice(Craft.t('docs-manager', 'Sources deleted'));
-				setTimeout(() => window.location.reload(), 1000);
-			}
-		}).catch(function() {
-			Craft.cp.displayError(Craft.t('docs-manager', 'Failed to delete sources'));
-		});
-	});
-
-	// Individual row action clicks
-	document.querySelectorAll('[data-action]').forEach(function(btn) {
-		btn.addEventListener('click', function(e) {
-			e.preventDefault();
-			const action = this.dataset.action;
-			const id = this.dataset.id;
-			const name = this.dataset.name || '';
-
-			if (action === 'sync') {
-				Craft.sendActionRequest('POST', 'docs-manager/sources/sync', {
-					data: { sourceId: id }
-				}).then(function(response) {
-					if (response.data.success) {
-						Craft.cp.displayNotice(Craft.t('docs-manager', 'Source "{name}" synced', {name: name}));
-						setTimeout(() => window.location.reload(), 1000);
-					} else {
-						Craft.cp.displayError(response.data.error || Craft.t('docs-manager', 'Sync failed'));
-					}
-				}).catch(function() {
-					Craft.cp.displayError(Craft.t('docs-manager', 'Failed to sync source'));
-				});
-			} else if (action === 'delete') {
-				if (!confirm(Craft.t('docs-manager', 'Delete source "{name}"? This cannot be undone.', {name: name}))) return;
-
-				Craft.sendActionRequest('POST', 'docs-manager/sources/delete', {
-					data: { sourceId: id }
-				}).then(function(response) {
-					if (response.data && response.data.success !== false) {
-						Craft.cp.displayNotice(Craft.t('docs-manager', 'Source deleted'));
-						setTimeout(() => window.location.reload(), 1000);
-					} else {
-						Craft.cp.displayError(Craft.t('docs-manager', 'Failed to delete source'));
-					}
-				}).catch(function() {
-					Craft.cp.displayError(Craft.t('docs-manager', 'Failed to delete source'));
-				});
-			}
-		});
+		const ids = selectedIds();
+		if (!ids.length) return;
+		if (!confirm(T.bulkDeleteConfirmTemplate.replace('{count}', ids.length))) return;
+		runBulkStatus('docs-manager/sources/bulk-delete', T.bulkDeletedTemplate, T.bulkDeleteFailed);
 	});
 
 	// Update selected count
 	document.addEventListener('lr:selectionChanged', function(e) {
 		const countSpan = document.getElementById('lr-selected-count');
 		if (countSpan) {
-			countSpan.textContent = e.detail.count;
+			countSpan.textContent = (e.detail && typeof e.detail.count === 'number') ? e.detail.count : 0;
 		}
 	});
 })();
