@@ -29,7 +29,7 @@
         label: selectedSite.name|t('site'),
         menu: {
             items: siteMenuItems,
-            label: 'Select site'|t('app')
+            label: 'Select site'|t('docs-manager')
         }
     }] %}
 {% endif %}
@@ -50,16 +50,16 @@
 
 {% block actionButton %}
     <div class="btngroup submit">
-        <button type="submit" class="btn submit">{{ "Save"|t('app') }}</button>
+        <button type="submit" class="btn submit">{{ "Save"|t('docs-manager') }}</button>
     </div>
     {% if source.id %}
-        <button type="button" id="action-btn" class="btn menubtn action-btn hairline-dark m" title="{{ 'Actions'|t('app') }}" aria-controls="action-menu" aria-label="{{ 'Actions'|t('app') }}" data-disclosure-trigger="true" aria-expanded="false"></button>
+        <button type="button" id="action-btn" class="btn menubtn action-btn hairline-dark m" title="{{ 'Actions'|t('docs-manager') }}" aria-controls="action-menu" aria-label="{{ 'Actions'|t('docs-manager') }}" data-disclosure-trigger="true" aria-expanded="false"></button>
         <div id="action-menu" class="menu menu--disclosure">
             <ul>
                 <li>
                     <button class="menu-item error formsubmit" data-destructive data-action="docs-manager/sources/delete" data-params='{"sourceId":{{ source.id }}}' data-confirm="{{ 'Are you sure you want to delete this source?'|t('docs-manager') }}" data-redirect="{{ 'docs-manager/sources'|hash }}" data-headers='{"Accept":"application/json"}'>
                         <span class="icon">{{ svg('@app/icons/trash.svg') }}</span>
-                        <span class="menu-item-label">{{ "Delete"|t('app') }}</span>
+                        <span class="menu-item-label">{{ "Delete"|t('docs-manager') }}</span>
                     </button>
                 </li>
             </ul>
@@ -226,7 +226,7 @@
     {% if source.id %}
         <dl class="meta read-only">
             <div class="data">
-                <dt class="heading">{{ "ID"|t('app') }}</dt>
+                <dt class="heading">{{ "ID"|t('docs-manager') }}</dt>
                 <dd class="value">{{ source.id }}</dd>
             </div>
             <div class="data">
@@ -234,14 +234,14 @@
                 <dd class="value">{{ source.kind|capitalize }}</dd>
             </div>
             <div class="data">
-                <dt class="heading">{{ "Status"|t('app') }}</dt>
+                <dt class="heading">{{ "Status"|t('docs-manager') }}</dt>
                 <dd class="value">
                     {% if source.enabled %}
                         <span class="status live"></span>
-                        <span>{{ 'Enabled'|t('app') }}</span>
+                        <span>{{ 'Enabled'|t('docs-manager') }}</span>
                     {% else %}
                         <span class="status disabled"></span>
-                        <span>{{ 'Disabled'|t('app') }}</span>
+                        <span>{{ 'Disabled'|t('docs-manager') }}</span>
                     {% endif %}
                 </dd>
             </div>
@@ -256,11 +256,11 @@
                 </div>
             {% endif %}
             <div class="data">
-                <dt class="heading">{{ "Created at"|t('app') }}</dt>
+                <dt class="heading">{{ "Created at"|t('docs-manager') }}</dt>
                 <dd class="value">{{ source.dateCreated|lrDatetime }}</dd>
             </div>
             <div class="data">
-                <dt class="heading">{{ "Updated at"|t('app') }}</dt>
+                <dt class="heading">{{ "Updated at"|t('docs-manager') }}</dt>
                 <dd class="value">{{ source.dateUpdated|lrDatetime }}</dd>
             </div>
         </dl>

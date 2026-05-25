@@ -28,7 +28,7 @@
 {% if currentUser.admin %}
     {% set subnav = subnav|merge({
         'settings': {
-            label: 'Settings'|t('app'),
+            label: 'Settings'|t('docs-manager'),
             url: url('settings/plugins/docs-manager')
         }
     }) %}

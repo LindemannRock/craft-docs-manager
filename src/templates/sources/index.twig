@@ -36,7 +36,7 @@
 		label: selectedSite.name|t('site'),
 		menu: {
 			items: siteMenuItems,
-			label: 'Select site'|t('app')
+			label: 'Select site'|t('docs-manager')
 		}
 	}] %}
 {% endif %}
@@ -100,7 +100,7 @@
 			{key: 'currentVersion', label: 'Version'|t('docs-manager'), hideable: true},
 			{key: 'pages', label: 'Pages'|t('docs-manager'), hideable: true},
 			{key: 'lastSyncedAt', label: 'Last Synced'|t('docs-manager'), sortable: true, hideable: true},
-			{key: 'enabled', label: 'Status'|t('app'), sortable: true, hideable: true},
+			{key: 'enabled', label: 'Status'|t('docs-manager'), sortable: true, hideable: true},
 		],
 		items: sources,
 		emptyMessage: 'No sources found.'|t('docs-manager'),
@@ -177,7 +177,7 @@
 {% block rowActions %}
 	{% set actionItems = [
 		{
-			label: 'Edit'|t('app'),
+			label: 'Edit'|t('docs-manager'),
 			url: url('docs-manager/sources/' ~ item.id),
 		},
 		{
@@ -191,7 +191,7 @@
 		{% set actionItems = actionItems|merge([
 			{type: 'divider'},
 			{
-				label: 'Delete'|t('app'),
+				label: 'Delete'|t('docs-manager'),
 				class: 'error',
 				jsAction: 'delete',
 				data: {name: item.name},
@@ -204,7 +204,7 @@
 		actions: {
 			type: 'menu',
 			icon: 'settings',
-			title: 'Actions'|t('app'),
+			title: 'Actions'|t('docs-manager'),
 			items: actionItems,
 		},
 	} only %}
@@ -213,7 +213,7 @@
 {% block bulkActions %}
 	{% if canManage %}
 		<button type="button" class="btn menubtn secondary" id="lr-bulk-status-btn">
-			{{ 'Set status'|t('app') }}
+			{{ 'Set status'|t('docs-manager') }}
 		</button>
 		<div class="menu">
 			<ul>
@@ -223,7 +223,7 @@
 		</div>
 
 		<button type="button" class="btn secondary" id="lr-bulk-delete-btn">
-			{{ 'Delete'|t('app') }} (<span id="lr-selected-count">0</span>)
+			{{ 'Delete'|t('docs-manager') }} (<span id="lr-selected-count">0</span>)
 		</button>
 	{% endif %}
 {% endblock %}

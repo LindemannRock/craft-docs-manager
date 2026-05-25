@@ -107,7 +107,7 @@
 		label: selectedSite.name|t('site'),
 		menu: {
 			items: siteMenuItems,
-			label: 'Select site'|t('app')
+			label: 'Select site'|t('docs-manager')
 		}
 	}] %}
 {% endif %}
@@ -173,11 +173,11 @@
 	},
 	table: {
 		columns: [
-			{key: 'title', label: 'Title'|t('app'), sortable: true},
+			{key: 'title', label: 'Title'|t('docs-manager'), sortable: true},
 			{key: 'source', label: 'Source'|t('docs-manager'), sortable: true, hideable: true},
 			{key: 'pageType', label: 'Type'|t('docs-manager'), sortable: true, hideable: true},
 			{key: 'slug', label: 'Slug'|t('docs-manager'), sortable: true, hideable: true},
-			{key: 'enabled', label: 'Status'|t('app'), sortable: true, hideable: true},
+			{key: 'enabled', label: 'Status'|t('docs-manager'), sortable: true, hideable: true},
 		],
 		items: paginatedItems,
 		emptyMessage: 'No custom pages found.'|t('docs-manager'),
@@ -261,13 +261,13 @@
 
 	{% if canManage %}
 		{% set actionItems = actionItems|merge([{
-			label: 'Edit'|t('app'),
+			label: 'Edit'|t('docs-manager'),
 			url: url('docs-manager/pages/' ~ item.id),
 		}]) %}
 		{% set actionItems = actionItems|merge([
 			{type: 'divider'},
 			{
-				label: 'Delete'|t('app'),
+				label: 'Delete'|t('docs-manager'),
 				class: 'error',
 				jsAction: 'delete',
 				data: {name: item.title},
@@ -281,7 +281,7 @@
 			actions: {
 				type: 'menu',
 				icon: 'settings',
-				title: 'Actions'|t('app'),
+				title: 'Actions'|t('docs-manager'),
 				items: actionItems,
 			},
 		} only %}
@@ -291,7 +291,7 @@
 {% block bulkActions %}
 	{% if canManage %}
 		<button type="button" class="btn menubtn secondary" id="lr-bulk-status-btn">
-			{{ 'Set status'|t('app') }}
+			{{ 'Set status'|t('docs-manager') }}
 		</button>
 		<div class="menu">
 			<ul>
@@ -301,7 +301,7 @@
 		</div>
 
 		<button type="button" class="btn secondary" id="lr-bulk-delete-btn">
-			{{ 'Delete'|t('app') }} (<span id="lr-selected-count">0</span>)
+			{{ 'Delete'|t('docs-manager') }} (<span id="lr-selected-count">0</span>)
 		</button>
 	{% endif %}
 {% endblock %}
