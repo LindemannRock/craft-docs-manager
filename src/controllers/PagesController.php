@@ -31,8 +31,13 @@ class PagesController extends Controller
     public function actionIndex(?int $sourceId = null): Response
     {
         $this->requirePermission('docsManager:managePages');
+
+        $request = Craft::$app->getRequest();
+        $user = Craft::$app->getUser();
+        $settings = DocsManager::getInstance()->getSettings();
+
         // Resolve current site from request
-        $siteHandle = $this->request->getParam('site');
+        $siteHandle = $request->getParam('site');
         $currentSite = $siteHandle
             ? Craft::$app->getSites()->getSiteByHandle($siteHandle)
             : Craft::$app->getSites()->getCurrentSite();
@@ -53,22 +58,139 @@ class PagesController extends Controller
             $this->requirePermission('editSite:' . $currentSite->uid);
         }
 
+        // ---- Param parsing + allowlist validation -------------------------
+        // Every parameter that controls filtering or sorting goes through an
+        // explicit allowlist. Off-list values snap back to the default.
+
+        $statusFilter = (string) $request->getQueryParam('status', 'all');
+        $validStatuses = ['all', 'enabled', 'disabled'];
+        if (!in_array($statusFilter, $validStatuses, true)) {
+            $statusFilter = 'all';
+        }
+
+        $typeFilter = (string) $request->getQueryParam('type', 'all');
+        $validTypes = ['all', 'features', 'faq', 'support', 'pricing', 'custom'];
+        if (!in_array($typeFilter, $validTypes, true)) {
+            $typeFilter = 'all';
+        }
+
+        // 64-char defensive clamp on free-text search.
+        $search = trim((string) $request->getQueryParam('search', ''));
+        if (mb_strlen($search) > 64) {
+            $search = mb_substr($search, 0, 64);
+        }
+
+        $validSortFields = ['title', 'source', 'pageType', 'slug', 'enabled'];
+        $sort = (string) $request->getQueryParam('sort', 'title');
+        if (!in_array($sort, $validSortFields, true)) {
+            $sort = 'title';
+        }
+        $dir = strtolower((string) $request->getQueryParam('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $page = max(1, (int) $request->getQueryParam('page', 1));
+        $limit = max(1, (int) ($settings->itemsPerPage ?? 50));
+
+        // ---- Load + filter ------------------------------------------------
+        /** @var SourceRecord[] $sourceRecords */
         $sourceRecords = SourceRecord::find()
             ->where(['enabled' => true])
             ->orderBy(['name' => SORT_ASC])
             ->all();
 
+        // Build source lookup map for both filter resolution and sort comparison.
+        $sourceMap = [];
+        foreach ($sourceRecords as $sourceRecord) {
+            $sourceMap[$sourceRecord->id] = $sourceRecord;
+        }
+
         $query = PluginPage::find()->status(null)->siteId($currentSite->id);
         if ($sourceId) {
             $query->sourceId($sourceId);
         }
+
+        // Load all pages for this site/source — the existing Twig pattern was
+        // in-memory; keeping that shape since custom-pages counts are bounded
+        // (handful of `pageType` values per source).
+        /** @var PluginPage[] $pages */
         $pages = $query->orderBy(['docsmanager_custom_pages.order' => SORT_ASC])->all();
+
+        if ($statusFilter === 'enabled') {
+            $pages = array_values(array_filter($pages, fn(PluginPage $p): bool => (bool) $p->enabled));
+        } elseif ($statusFilter === 'disabled') {
+            $pages = array_values(array_filter($pages, fn(PluginPage $p): bool => !$p->enabled));
+        }
+
+        if ($typeFilter !== 'all') {
+            $pages = array_values(array_filter($pages, fn(PluginPage $p): bool => $p->pageType === $typeFilter));
+        }
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $pages = array_values(array_filter($pages, fn(PluginPage $p): bool =>
+                str_contains(mb_strtolower((string) $p->title), $needle) ||
+                str_contains(mb_strtolower((string) ($p->slug ?? '')), $needle)
+            ));
+        }
+
+        // ---- Sort + paginate ----------------------------------------------
+        $pages = $this->sortPages($pages, $sort, $dir, $sourceMap);
+
+        // totalCount is computed *after* filtering so the pager reflects what
+        // the user can actually see, not the underlying set size.
+        $totalCount = count($pages);
+        $offset = ($page - 1) * $limit;
+        $pages = array_slice($pages, $offset, $limit);
 
         return $this->renderTemplate('docs-manager/pages/index', [
             'pages' => $pages,
             'sourceRecords' => $sourceRecords,
             'selectedSourceId' => $sourceId,
+            'statusFilter' => $statusFilter,
+            'typeFilter' => $typeFilter,
+            'search' => $search,
+            'sort' => $sort,
+            'dir' => $dir,
+            'page' => $page,
+            'limit' => $limit,
+            'totalCount' => $totalCount,
+            'canCreate' => $user->checkPermission('docsManager:createPages'),
+            'canEdit' => $user->checkPermission('docsManager:editPages'),
+            'canDelete' => $user->checkPermission('docsManager:deletePages'),
+            'canManage' => $user->checkPermission('docsManager:managePages'),
         ]);
+    }
+
+    /**
+     * @param PluginPage[] $pages
+     * @param array<int, SourceRecord> $sourceMap
+     * @return PluginPage[]
+     */
+    private function sortPages(array $pages, string $sort, string $dir, array $sourceMap): array
+    {
+        $multiplier = $dir === 'desc' ? -1 : 1;
+
+        usort($pages, function(PluginPage $a, PluginPage $b) use ($sort, $multiplier, $sourceMap): int {
+            $cmp = match ($sort) {
+                'source' => strcasecmp(
+                    (string) ($sourceMap[$a->sourceId]->name ?? ''),
+                    (string) ($sourceMap[$b->sourceId]->name ?? '')
+                ),
+                'pageType' => strcasecmp((string) $a->pageType, (string) $b->pageType),
+                'slug' => strcasecmp((string) ($a->slug ?? ''), (string) ($b->slug ?? '')),
+                'enabled' => ((int) $a->enabled) <=> ((int) $b->enabled),
+                default => strcasecmp((string) $a->title, (string) $b->title),
+            };
+
+            // Stable tie-break by title so equal primary keys don't shuffle
+            // between requests — keeps pagination predictable.
+            if ($cmp === 0 && $sort !== 'title') {
+                $cmp = strcasecmp((string) $a->title, (string) $b->title);
+            }
+
+            return $cmp * $multiplier;
+        });
+
+        return $pages;
     }
 
     /**
