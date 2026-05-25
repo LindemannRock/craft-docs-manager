@@ -156,8 +156,8 @@ class PluginPage extends Element
     public static function statuses(): array
     {
         return [
-            self::STATUS_ENABLED => Craft::t('app', 'Enabled'),
-            self::STATUS_DISABLED => Craft::t('app', 'Disabled'),
+            self::STATUS_ENABLED => Craft::t('docs-manager', 'Enabled'),
+            self::STATUS_DISABLED => Craft::t('docs-manager', 'Disabled'),
         ];
     }
 
