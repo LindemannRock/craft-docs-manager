@@ -9,6 +9,7 @@
 namespace lindemannrock\docsmanager\controllers;
 
 use Craft;
+use craft\db\Query;
 use craft\helpers\App;
 use craft\web\Controller;
 use lindemannrock\docsmanager\DocsManager;
@@ -34,6 +35,7 @@ class SourcesController extends Controller
 
         $request = Craft::$app->getRequest();
         $settings = DocsManager::getInstance()->getSettings();
+        $user = Craft::$app->getUser();
 
         // Resolve current site from request
         $siteHandle = $request->getParam('site');
@@ -57,31 +59,55 @@ class SourcesController extends Controller
             $this->requirePermission('editSite:' . $currentSite->uid);
         }
 
-        // Get query parameters
-        $search = $request->getQueryParam('search', '');
-        $statusFilter = $request->getQueryParam('status', 'all');
-        $kindFilter = $request->getQueryParam('kind', 'all');
-        $sort = $request->getQueryParam('sort', 'name');
-        $dir = $request->getQueryParam('dir', 'asc');
-        $page = max(1, (int)$request->getQueryParam('page', 1));
-        $limit = $settings->itemsPerPage ?? 50;
+        // ---- Param parsing + allowlist validation -------------------------
+        // Every parameter that controls filtering or sorting goes through an
+        // explicit allowlist. Off-list values snap back to the default.
 
-        // Get all sources
+        $statusFilter = (string) $request->getQueryParam('status', 'all');
+        $validStatuses = ['all', 'enabled', 'disabled'];
+        if (!in_array($statusFilter, $validStatuses, true)) {
+            $statusFilter = 'all';
+        }
+
+        $kindFilter = (string) $request->getQueryParam('kind', 'all');
+        $validKinds = ['all', 'plugin', 'theme'];
+        if (!in_array($kindFilter, $validKinds, true)) {
+            $kindFilter = 'all';
+        }
+
+        // 64-char defensive clamp on free-text search. Keeps a runaway payload
+        // (URL of any length) from reaching the LIKE comparison.
+        $search = trim((string) $request->getQueryParam('search', ''));
+        if (mb_strlen($search) > 64) {
+            $search = mb_substr($search, 0, 64);
+        }
+
+        $validSortFields = ['name', 'handle', 'kind', 'currentVersion', 'pages', 'lastSyncedAt', 'enabled'];
+        $sort = (string) $request->getQueryParam('sort', 'name');
+        if (!in_array($sort, $validSortFields, true)) {
+            $sort = 'name';
+        }
+        $dir = strtolower((string) $request->getQueryParam('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $page = max(1, (int) $request->getQueryParam('page', 1));
+        $limit = max(1, (int) ($settings->itemsPerPage ?? 50));
+
+        // ---- Load + filter ------------------------------------------------
+        // In-memory variant: source counts are bounded (a workspace's plugin/
+        // theme catalog rarely exceeds a few dozen). Loading all matching
+        // rows lets us sort by the computed `pages` count without an N+1.
         $query = SourceRecord::find();
 
-        // Apply status filter
         if ($statusFilter === 'enabled') {
             $query->where(['enabled' => true]);
         } elseif ($statusFilter === 'disabled') {
             $query->where(['enabled' => false]);
         }
 
-        // Apply kind filter
         if ($kindFilter !== 'all') {
             $query->andWhere(['kind' => $kindFilter]);
         }
 
-        // Apply search filter
         if ($search !== '') {
             $query->andWhere([
                 'or',
@@ -90,37 +116,96 @@ class SourcesController extends Controller
             ]);
         }
 
-        // Get total count before pagination
-        $totalCount = $query->count();
-        $totalPages = $totalCount > 0 ? (int)ceil($totalCount / $limit) : 1;
+        /** @var SourceRecord[] $sources */
+        $sources = $query->all();
 
-        // Ensure page is within bounds
-        $page = min($page, $totalPages);
+        // Pre-compute synced-page counts per source via a single GROUP BY
+        // query. The template's `craft.docsManager.getPages(handle)|length`
+        // call hits this same data; eagerly resolving here keeps the row
+        // render N=1 (was N+1: one query per visible row).
+        $pageCounts = $this->_loadPageCounts();
 
-        // Apply sorting
-        $allowedSortFields = ['name', 'handle', 'kind', 'lastSyncedAt', 'enabled'];
-        $sortField = in_array($sort, $allowedSortFields, true) ? $sort : 'name';
-        $sortDirection = $dir === 'desc' ? SORT_DESC : SORT_ASC;
+        // ---- Sort + paginate ----------------------------------------------
+        $sources = $this->_sortSources($sources, $sort, $dir, $pageCounts);
 
-        // Apply pagination
+        // totalCount is computed *after* filtering so the pager reflects what
+        // the user can actually see, not the underlying table size.
+        $totalCount = count($sources);
         $offset = ($page - 1) * $limit;
-        $sources = $query
-            ->orderBy([$sortField => $sortDirection])
-            ->limit($limit)
-            ->offset($offset)
-            ->all();
+        $sources = array_slice($sources, $offset, $limit);
 
         return $this->renderTemplate('docs-manager/sources/index', [
             'sources' => $sources,
+            'pageCounts' => $pageCounts,
             'search' => $search,
             'statusFilter' => $statusFilter,
             'kindFilter' => $kindFilter,
+            'sort' => $sort,
+            'dir' => $dir,
             'page' => $page,
-            'totalPages' => $totalPages,
             'totalCount' => $totalCount,
             'limit' => $limit,
             'offset' => $offset,
+            'canCreate' => $user->checkPermission('docsManager:createSources'),
+            'canEdit' => $user->checkPermission('docsManager:editSources'),
+            'canDelete' => $user->checkPermission('docsManager:deleteSources'),
+            'canManage' => $user->checkPermission('docsManager:manageSources'),
         ]);
+    }
+
+    /**
+     * Single GROUP BY query that maps sourceId → synced-page count for every
+     * source in `{{%docsmanager_pages}}`. Used to drive the `pages` column's
+     * sort and to render the count without an N+1 lookup per row.
+     *
+     * @return array<int, int> sourceId → count
+     */
+    private function _loadPageCounts(): array
+    {
+        $rows = (new Query())
+            ->select(['sourceId', 'pageCount' => 'COUNT(*)'])
+            ->from('{{%docsmanager_pages}}')
+            ->groupBy(['sourceId'])
+            ->all();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row['sourceId']] = (int) $row['pageCount'];
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param SourceRecord[] $sources
+     * @param array<int, int> $pageCounts sourceId → count
+     * @return SourceRecord[]
+     */
+    private function _sortSources(array $sources, string $sort, string $dir, array $pageCounts): array
+    {
+        $multiplier = $dir === 'desc' ? -1 : 1;
+
+        usort($sources, function(SourceRecord $a, SourceRecord $b) use ($sort, $multiplier, $pageCounts): int {
+            $cmp = match ($sort) {
+                'handle' => strcasecmp((string) $a->handle, (string) $b->handle),
+                'kind' => strcasecmp((string) $a->kind, (string) $b->kind),
+                'currentVersion' => strnatcasecmp((string) $a->currentVersion, (string) $b->currentVersion),
+                'pages' => ($pageCounts[$a->id] ?? 0) <=> ($pageCounts[$b->id] ?? 0),
+                'lastSyncedAt' => strcmp((string) $a->lastSyncedAt, (string) $b->lastSyncedAt),
+                'enabled' => ((int) $a->enabled) <=> ((int) $b->enabled),
+                default => strcasecmp((string) $a->name, (string) $b->name),
+            };
+
+            // Stable tie-break by name so equal primary keys don't shuffle
+            // between requests — keeps pagination predictable.
+            if ($cmp === 0 && $sort !== 'name') {
+                $cmp = strcasecmp((string) $a->name, (string) $b->name);
+            }
+
+            return $cmp * $multiplier;
+        });
+
+        return $sources;
     }
 
     /**
@@ -529,12 +614,13 @@ class SourcesController extends Controller
     public function actionBulkEnable(): Response
     {
         $this->requirePostRequest();
+        $this->requireAcceptsJson();
         $this->requirePermission('docsManager:editSources');
         $sourceIds = Craft::$app->getRequest()->getBodyParam('sourceIds', []);
 
-        $updated = SourceRecord::updateAll(['enabled' => true], ['id' => $sourceIds]);
+        $count = SourceRecord::updateAll(['enabled' => true], ['id' => $sourceIds]);
 
-        return $this->asJson(['success' => true, 'updated' => $updated]);
+        return $this->asJson(['success' => true, 'count' => $count]);
     }
 
     /**
@@ -543,12 +629,13 @@ class SourcesController extends Controller
     public function actionBulkDisable(): Response
     {
         $this->requirePostRequest();
+        $this->requireAcceptsJson();
         $this->requirePermission('docsManager:editSources');
         $sourceIds = Craft::$app->getRequest()->getBodyParam('sourceIds', []);
 
-        $updated = SourceRecord::updateAll(['enabled' => false], ['id' => $sourceIds]);
+        $count = SourceRecord::updateAll(['enabled' => false], ['id' => $sourceIds]);
 
-        return $this->asJson(['success' => true, 'updated' => $updated]);
+        return $this->asJson(['success' => true, 'count' => $count]);
     }
 
     /**
@@ -557,11 +644,12 @@ class SourcesController extends Controller
     public function actionBulkDelete(): Response
     {
         $this->requirePostRequest();
+        $this->requireAcceptsJson();
         $this->requirePermission('docsManager:deleteSources');
         $sourceIds = Craft::$app->getRequest()->getBodyParam('sourceIds', []);
 
-        $deleted = SourceRecord::deleteAll(['id' => $sourceIds]);
+        $count = SourceRecord::deleteAll(['id' => $sourceIds]);
 
-        return $this->asJson(['success' => true, 'deleted' => $deleted]);
+        return $this->asJson(['success' => true, 'count' => $count]);
     }
 }
