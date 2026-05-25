@@ -48,6 +48,17 @@ return [
     'Sync' => 'مزامنة',
     'Sync All' => 'مزامنة الكل',
     'Syncing...' => 'جارٍ المزامنة...',
+    'Actions' => 'الإجراءات',
+    'Delete' => 'حذف',
+    'Edit' => 'تحرير',
+    'Save' => 'حفظ',
+    'Save and continue editing' => 'حفظ وإكمال التحرير',
+    'Set status' => 'تعيين الحالة',
+    'Select site' => 'اختيار الموقع',
+    'Title' => 'العنوان',
+    'ID' => 'ID',
+    'Created at' => 'تم الإنشاء في',
+    'Updated at' => 'تم التحديث في',
 
     // Element
     'Custom Page' => 'صفحة مخصصة',

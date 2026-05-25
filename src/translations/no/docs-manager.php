@@ -48,6 +48,17 @@ return [
     'Sync' => 'Synkroniser',
     'Sync All' => 'Synkroniser alle',
     'Syncing...' => 'Synkroniserer...',
+    'Actions' => 'Handlinger',
+    'Delete' => 'Slett',
+    'Edit' => 'Rediger',
+    'Save' => 'Lagre',
+    'Save and continue editing' => 'Lagre og fortsett redigering',
+    'Set status' => 'Sett status',
+    'Select site' => 'Velg nettsted',
+    'Title' => 'Tittel',
+    'ID' => 'ID',
+    'Created at' => 'Opprettet',
+    'Updated at' => 'Oppdatert',
 
     // Element
     'Custom Page' => 'Tilpasset side',

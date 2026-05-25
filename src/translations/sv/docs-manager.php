@@ -48,6 +48,17 @@ return [
     'Sync' => 'Synkronisera',
     'Sync All' => 'Synkronisera alla',
     'Syncing...' => 'Synkroniserar...',
+    'Actions' => 'Åtgärder',
+    'Delete' => 'Ta bort',
+    'Edit' => 'Redigera',
+    'Save' => 'Spara',
+    'Save and continue editing' => 'Spara och fortsätt redigera',
+    'Set status' => 'Ställ in status',
+    'Select site' => 'Välj webbplats',
+    'Title' => 'Titel',
+    'ID' => 'ID',
+    'Created at' => 'Skapad',
+    'Updated at' => 'Uppdaterad',
 
     // Element
     'Custom Page' => 'Anpassad sida',

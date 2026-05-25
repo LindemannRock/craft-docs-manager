@@ -48,6 +48,17 @@ return [
     'Sync' => 'Sincronizza',
     'Sync All' => 'Sincronizza tutto',
     'Syncing...' => 'Sincronizzazione in corso...',
+    'Actions' => 'Azioni',
+    'Delete' => 'Elimina',
+    'Edit' => 'Modifica',
+    'Save' => 'Salva',
+    'Save and continue editing' => 'Salva e continua la modifica',
+    'Set status' => 'Imposta stato',
+    'Select site' => 'Seleziona sito',
+    'Title' => 'Titolo',
+    'ID' => 'ID',
+    'Created at' => 'Creato il',
+    'Updated at' => 'Aggiornato il',
 
     // Element
     'Custom Page' => 'Pagina personalizzata',

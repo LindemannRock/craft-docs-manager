@@ -48,6 +48,17 @@ return [
     'Sync' => 'Synchroniseren',
     'Sync All' => 'Alles synchroniseren',
     'Syncing...' => 'Bezig met synchroniseren...',
+    'Actions' => 'Acties',
+    'Delete' => 'Verwijderen',
+    'Edit' => 'Bewerken',
+    'Save' => 'Opslaan',
+    'Save and continue editing' => 'Opslaan en doorgaan met aanpassen',
+    'Set status' => 'Status instellen',
+    'Select site' => 'Site kiezen',
+    'Title' => 'Titel',
+    'ID' => 'ID',
+    'Created at' => 'Gemaakt op',
+    'Updated at' => 'Geüpdatet op',
 
     // Element
     'Custom Page' => 'Aangepaste pagina',

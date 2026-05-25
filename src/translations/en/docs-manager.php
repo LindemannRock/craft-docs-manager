@@ -48,6 +48,17 @@ return [
     'Sync' => 'Sync',
     'Sync All' => 'Sync All',
     'Syncing...' => 'Syncing...',
+    'Actions' => 'Actions',
+    'Delete' => 'Delete',
+    'Edit' => 'Edit',
+    'Save' => 'Save',
+    'Save and continue editing' => 'Save and continue editing',
+    'Set status' => 'Set status',
+    'Select site' => 'Select site',
+    'Title' => 'Title',
+    'ID' => 'ID',
+    'Created at' => 'Created at',
+    'Updated at' => 'Updated at',
 
     // Element
     'Custom Page' => 'Custom Page',

@@ -48,6 +48,17 @@ return [
     'Sync' => '同期する',
     'Sync All' => 'すべて同期する',
     'Syncing...' => '同期中...',
+    'Actions' => 'アクション',
+    'Delete' => '削除する',
+    'Edit' => '編集',
+    'Save' => '保存する',
+    'Save and continue editing' => '保存して編集を続ける',
+    'Set status' => 'ステータスを設定する',
+    'Select site' => 'サイトを選択する',
+    'Title' => 'タイトル',
+    'ID' => 'ID',
+    'Created at' => '作成日時',
+    'Updated at' => '更新日時',
 
     // Element
     'Custom Page' => 'カスタムページ',
