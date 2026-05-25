@@ -284,7 +284,7 @@ class SourcesController extends Controller
         }
 
         Craft::$app->getSession()->setNotice(Craft::t('docs-manager', 'Source saved.'));
-        return $this->redirectToPostedUrl();
+        return $this->redirectToPostedUrl($source);
     }
 
     /**
