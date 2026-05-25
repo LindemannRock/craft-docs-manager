@@ -5,6 +5,8 @@
 {% set title = isNew ? 'Add Source'|t('docs-manager') : source.name %}
 {% set selectedSubnavItem = 'sources' %}
 {% set fullPageForm = true %}
+{% set saveShortcutRedirect = cpUrl('docs-manager/sources/{id}') %}
+{% set retainScrollOnSaveShortcut = true %}
 
 {# Site crumb for multi-site #}
 {% set crumbs = [] %}
@@ -51,6 +53,17 @@
 {% block actionButton %}
     <div class="btngroup submit">
         <button type="submit" class="btn submit">{{ "Save"|t('docs-manager') }}</button>
+        <button type="button" class="btn submit menubtn"></button>
+        <div class="menu">
+            <ul role="listbox">
+                <li>
+                    <a class="formsubmit" role="option" tabindex="0" data-redirect="{{ cpUrl('docs-manager/sources/{id}')|hash }}">
+                        <span class="label">{{ 'Save and continue editing'|t('docs-manager') }}</span>
+                        <span class="shortcut" id="save-shortcut"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
     {% if source.id %}
         <button type="button" id="action-btn" class="btn menubtn action-btn hairline-dark m" title="{{ 'Actions'|t('docs-manager') }}" aria-controls="action-menu" aria-label="{{ 'Actions'|t('docs-manager') }}" data-disclosure-trigger="true" aria-expanded="false"></button>

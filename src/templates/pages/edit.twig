@@ -6,7 +6,8 @@
 
 {% set title = isNew ? 'New Page'|t('docs-manager') : page.title %}
 {% set fullPageForm = true %}
-{% set saveShortcutRedirect = 'docs-manager/pages/{id}' %}
+{% set saveShortcutRedirect = cpUrl('docs-manager/pages/{id}') %}
+{% set retainScrollOnSaveShortcut = true %}
 
 {# Site crumb for multi-site #}
 {% set crumbs = [] %}
@@ -59,7 +60,7 @@
         <div class="menu">
             <ul role="listbox">
                 <li>
-                    <a class="formsubmit" role="option" tabindex="0" data-redirect="{{ url('docs-manager/pages/{id}')|hash }}">
+                    <a class="formsubmit" role="option" tabindex="0" data-redirect="{{ cpUrl('docs-manager/pages/{id}')|hash }}">
                         <span class="label">{{ 'Save and continue editing'|t('docs-manager') }}</span>
                         <span class="shortcut" id="save-shortcut"></span>
                     </a>
