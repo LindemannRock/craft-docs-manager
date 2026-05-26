@@ -159,16 +159,23 @@ class Settings extends Model
         ], $this->pluginNameSettingsRules(), $this->logLevelSettingsRules(), $this->dateFormatSettingsRules(), $this->itemsPerPageSettingsRules());
     }
 
-    /**
-     * Attribute labels for validation error messages.
-     *
-     * Trait helpers merge in `pluginName`, `logLevel`, `itemsPerPage`, and the 5
-     * date format labels — translated via `lindemannrock-base`. Other properties
-     * fall through to Yii's auto-generated English labels.
-     */
     public function attributeLabels(): array
     {
-        return array_merge(
+        return array_merge([
+            'enabledSites' => Craft::t('docs-manager', 'Enabled Sites'),
+            'defaultSourceType' => Craft::t('docs-manager', 'Default Source Type'),
+            'localPluginBasePath' => Craft::t('docs-manager', 'Local Plugin Base Path'),
+            'githubToken' => Craft::t('docs-manager', 'GitHub Token'),
+            'autoSync' => Craft::t('docs-manager', 'Auto Sync'),
+            'syncSchedule' => Craft::t('docs-manager', 'Sync Schedule'),
+            'enableSyntaxHighlighting' => Craft::t('docs-manager', 'Enable Syntax Highlighting'),
+            'codeTheme' => Craft::t('docs-manager', 'Code Theme'),
+            'codeFontSize' => Craft::t('docs-manager', 'Font Size'),
+            'codeFontFamily' => Craft::t('docs-manager', 'Font Family (Optional)'),
+            'codeShowLineNumbers' => Craft::t('docs-manager', 'Show Line Numbers'),
+            'codeEnableCopyButton' => Craft::t('docs-manager', 'Enable Copy Button'),
+            'enableAnchorGeneration' => Craft::t('docs-manager', 'Enable Anchor Generation'),
+        ],
             $this->pluginNameSettingsLabel(),
             $this->logLevelSettingsLabel(),
             $this->dateFormatSettingsLabels(),
