@@ -44,12 +44,7 @@
                 id: 'syncSchedule',
                 name: 'settings[syncSchedule]',
                 value: settings.syncSchedule,
-                options: [
-                    { label: 'Hourly', value: 'hourly' },
-                    { label: 'Daily', value: 'daily' },
-                    { label: 'Weekly', value: 'weekly' },
-                    { label: 'Monthly', value: 'monthly' },
-                ],
+                options: settings.getSyncScheduleOptions(),
                 disabled: settings.isOverriddenByConfig('syncSchedule'),
                 warning: settings.isOverriddenByConfig('syncSchedule') ?
                     "This is being overridden by the <code>syncSchedule</code> setting in <code>config/docs-manager.php</code>."|t('docs-manager')|raw : null,
