@@ -122,7 +122,7 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
     {
         $settings = DocsManager::getInstance()->getSettings();
         $description = Craft::t('docs-manager', '{pluginName}: Scheduled plugin sync', [
-            'pluginName' => $settings->getFullName(),
+            'pluginName' => $settings->getDisplayName(),
         ]);
 
         if ($this->nextRunTime) {
