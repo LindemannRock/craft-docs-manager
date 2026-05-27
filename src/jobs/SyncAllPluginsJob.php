@@ -10,6 +10,8 @@ namespace lindemannrock\docsmanager\jobs;
 
 use Craft;
 use craft\queue\BaseJob;
+use lindemannrock\base\helpers\DateFormatHelper;
+use lindemannrock\base\helpers\ScheduleHelper;
 use lindemannrock\base\traits\QueueTtrTrait;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\logginglibrary\traits\LoggingTrait;
@@ -55,14 +57,17 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
         parent::init();
         $this->setLoggingHandle('docs-manager');
 
-        // Calculate and set next run time if not already set
         if ($this->reschedule && !$this->nextRunTime) {
             $settings = DocsManager::getInstance()->getSettings();
             if ($settings->autoSync) {
-                $delay = $this->calculateNextRunDelay($settings->syncSchedule);
-                if ($delay > 0) {
-                    // Short format: "Nov 8, 12:00am"
-                    $this->nextRunTime = date('M j, g:ia', time() + $delay);
+                $nextRun = ScheduleHelper::calculateNext($settings->syncSchedule);
+                if ($nextRun !== null) {
+                    $this->nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
+                        $nextRun,
+                        $settings,
+                        false,
+                        false,
+                    );
                 }
             }
         }
@@ -139,25 +144,16 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
             return;
         }
 
-        // Prevent duplicate scheduling - check if another sync job already exists
-        // This prevents fan-out if multiple jobs end up in the queue (manual runs, retries, etc.)
-        $existingJob = (new \craft\db\Query())
-            ->from('{{%queue}}')
-            ->where(['like', 'job', 'docsmanager'])
-            ->andWhere(['like', 'job', 'SyncAllPluginsJob'])
-            ->exists();
+        $nextRun = ScheduleHelper::calculateNext($settings->syncSchedule);
 
-        if ($existingJob) {
-            $this->logDebug('Skipping reschedule - sync job already exists');
-            return;
-        }
-
-        $delay = $this->calculateNextRunDelay($settings->syncSchedule);
-
-        if ($delay > 0) {
-            // Calculate next run time for display
-            $nextRunTime = date('M j, g:ia', time() + $delay);
-
+        if ($nextRun !== null) {
+            $delay = max(0, $nextRun->getTimestamp() - DateFormatHelper::now()->getTimestamp());
+            $nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
+                $nextRun,
+                $settings,
+                false,
+                false,
+            );
             // Create a new job for the next sync
             $job = new self([
                 'reschedule' => true,
@@ -172,19 +168,5 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
                 'next_run' => $nextRunTime,
             ]);
         }
-    }
-
-    /**
-     * Calculate the delay in seconds for the next sync
-     */
-    private function calculateNextRunDelay(string $schedule): int
-    {
-        return match ($schedule) {
-            'hourly' => 3600, // 1 hour
-            'daily' => 86400, // 24 hours
-            'weekly' => 604800, // 7 days
-            'monthly' => 2592000, // 30 days
-            default => 86400, // Default to daily
-        };
     }
 }
