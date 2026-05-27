@@ -12,6 +12,7 @@ use Craft;
 use craft\base\Model;
 use craft\behaviors\EnvAttributeParserBehavior;
 use craft\helpers\App;
+use lindemannrock\base\helpers\ScheduleHelper;
 use lindemannrock\base\traits\DateFormatSettingsTrait;
 use lindemannrock\base\traits\ItemsPerPageSettingsTrait;
 use lindemannrock\base\traits\LogLevelSettingsTrait;
@@ -38,6 +39,16 @@ class Settings extends Model
     use SettingsConfigTrait;
     use SettingsDisplayNameTrait;
     use SettingsPersistenceTrait;
+
+    /**
+     * Sync schedule options exposed by Docs Manager.
+     */
+    private const SYNC_SCHEDULE_OPTIONS = [
+        'hourly',
+        'daily',
+        'weekly',
+        'monthly',
+    ];
 
     /**
      * @var string Plugin display name
@@ -147,7 +158,7 @@ class Settings extends Model
         return array_merge([
             [['defaultSourceType', 'localPluginBasePath', 'githubToken', 'syncSchedule'], 'string'],
             [['defaultSourceType'], 'in', 'range' => ['local', 'github-api']],
-            [['syncSchedule'], 'in', 'range' => ['hourly', 'daily', 'weekly', 'monthly']],
+            [['syncSchedule'], 'in', 'range' => ScheduleHelper::getValidValues(self::SYNC_SCHEDULE_OPTIONS)],
             [['autoSync', 'enableSyntaxHighlighting', 'enableAnchorGeneration', 'codeEnableCopyButton', 'codeShowLineNumbers'], 'boolean'],
             [['codeTheme'], 'string', 'max' => 50],
             [['codeFontSize'], 'integer', 'min' => 8, 'max' => 32],
@@ -157,6 +168,17 @@ class Settings extends Model
             [['localPluginBasePath'], 'required', 'when' => fn(self $model): bool => $model->defaultSourceType === 'local'],
             [['localPluginBasePath'], 'validateLocalPluginBasePath'],
         ], $this->pluginNameSettingsRules(), $this->logLevelSettingsRules(), $this->dateFormatSettingsRules(), $this->itemsPerPageSettingsRules());
+    }
+
+    /**
+     * Get sync schedule options for settings dropdowns.
+     *
+     * @return array<array{value: string, label: string}>
+     * @since 5.1.0
+     */
+    public function getSyncScheduleOptions(): array
+    {
+        return ScheduleHelper::getOptions(self::SYNC_SCHEDULE_OPTIONS);
     }
 
     public function attributeLabels(): array
