@@ -27,6 +27,7 @@ use craft\web\UrlManager;
 use craft\web\View;
 use lindemannrock\base\helpers\ColorHelper;
 use lindemannrock\base\helpers\CpNavHelper;
+use lindemannrock\base\helpers\DateFormatHelper;
 use lindemannrock\base\helpers\PluginHelper;
 use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\elements\SourceDoc;
@@ -455,9 +456,9 @@ class DocsManager extends BasePlugin
     // BACKGROUND JOBS
     // =========================================================================
 
-    private function scheduleSyncJob(): void
+    private function scheduleSyncJob(?Settings $settings = null): void
     {
-        $settings = $this->getSettings();
+        $settings ??= $this->getSettings();
 
         if (!$settings->autoSync) {
             return;
@@ -470,16 +471,63 @@ class DocsManager extends BasePlugin
             ->exists();
 
         if (!$existingJob) {
+            $initialDelay = 5 * 60;
+            $initialRun = (clone DateFormatHelper::now())->modify("+{$initialDelay} seconds");
             $job = new \lindemannrock\docsmanager\jobs\SyncAllPluginsJob([
                 'reschedule' => true,
+                'nextRunTime' => DateFormatHelper::formatCompactDatetimeFromSettings(
+                    $initialRun,
+                    $settings,
+                    false,
+                    false,
+                ),
             ]);
 
-            Craft::$app->getQueue()->delay(5 * 60)->push($job);
+            Craft::$app->getQueue()->delay($initialDelay)->push($job);
 
             $this->logInfo('Scheduled initial sync job', [
                 'delay' => '5 minutes',
                 'schedule' => $settings->syncSchedule,
             ]);
         }
+    }
+
+    /**
+     * Handle automatic sync schedule changes when settings are saved.
+     *
+     * @since 5.1.0
+     */
+    public function handleSyncScheduleChange(Settings $newSettings, bool $oldAutoSync, string $oldSyncSchedule): void
+    {
+        if ($oldAutoSync === $newSettings->autoSync && $oldSyncSchedule === $newSettings->syncSchedule) {
+            return;
+        }
+
+        $this->cancelScheduledSyncJobs();
+
+        if (!$newSettings->autoSync) {
+            $this->logInfo('Automatic docs sync disabled');
+            return;
+        }
+
+        $this->scheduleSyncJob($newSettings);
+
+        $this->logInfo('Automatic docs sync schedule updated', [
+            'schedule' => $newSettings->syncSchedule,
+        ]);
+    }
+
+    /**
+     * Cancel pending automatic sync jobs.
+     */
+    private function cancelScheduledSyncJobs(): void
+    {
+        Craft::$app->getDb()->createCommand()
+            ->delete('{{%queue}}', [
+                'and',
+                ['like', 'job', 'docsmanager'],
+                ['like', 'job', 'SyncAllPluginsJob'],
+            ])
+            ->execute();
     }
 }
