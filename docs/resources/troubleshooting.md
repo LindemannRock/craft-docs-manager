@@ -13,6 +13,17 @@
 - Verify all paths in `.sidebar.json` have matching `.md` files
 - Check logs at **Docs Manager > Logs** for detailed errors
 
+## Scheduled Sync Does Not Reappear
+
+Docs Manager schedules one recurring queue job for automatic source sync. If the queue is empty after a scheduled sync runs:
+
+- Confirm the queue worker is running.
+- Visit any CP page to let Docs Manager bootstrap the initial job.
+- Check that `autoSync` is enabled.
+- Check that `syncSchedule` is set to `hourly`, `daily`, `weekly`, or `monthly`.
+
+The queued job description shows when that specific queued row is due to run.
+
 ## Pages Show 404
 
 - Verify `config/routes.php` has both doc routes (category/page and page-only)

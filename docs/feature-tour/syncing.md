@@ -57,6 +57,8 @@ return [
 ];
 ```
 
+Changing `syncSchedule` replaces the pending automatic sync queue row so the next run follows the newly selected schedule.
+
 ## Orphan Page Cleanup
 
 When a page is removed from `.sidebar.json`, it becomes an orphan. On the next sync, Docs Manager automatically deletes orphaned pages from the database — any `SourceDoc` element whose slug no longer appears in `.sidebar.json` is removed. This keeps the database in sync with the doc files on disk.
