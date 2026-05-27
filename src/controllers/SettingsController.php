@@ -184,6 +184,8 @@ class SettingsController extends Controller
             $this->request->getBodyParam('section', 'general'),
         );
         $settings = Settings::loadFromDatabase();
+        $oldAutoSync = $settings->autoSync;
+        $oldSyncSchedule = $settings->syncSchedule;
         $settingsData = Craft::$app->getRequest()->getBodyParam('settings', []);
 
         // Handle enabledSites checkbox group
@@ -235,6 +237,10 @@ class SettingsController extends Controller
         }
 
         if ($settings->saveToDatabase($attributesToValidate)) {
+            if (in_array('autoSync', $attributesToValidate, true) || in_array('syncSchedule', $attributesToValidate, true)) {
+                DocsManager::$plugin->handleSyncScheduleChange($settings, $oldAutoSync, $oldSyncSchedule);
+            }
+
             Craft::$app->getSession()->setNotice(Craft::t('docs-manager', 'Settings saved.'));
         } else {
             Craft::$app->getSession()->setError(Craft::t('docs-manager', 'Could not save settings'));
