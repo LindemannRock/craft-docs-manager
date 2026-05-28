@@ -8,8 +8,8 @@
 
 namespace lindemannrock\docsmanager\console\controllers;
 
-use Craft;
 use lindemannrock\docsmanager\DocsManager;
+use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
 
 /**
@@ -35,13 +35,13 @@ trait PluginPathTrait
     protected function resolvePluginPath(string $input): ?array
     {
         $settings = DocsManager::getInstance()->getSettings();
-        $basePath = Craft::getAlias($settings->localPluginBasePath);
+        $basePath = LocalSourcePathHelper::resolve((string) $settings->localPluginBasePath);
 
         // 1. Try as DB handle
         $record = SourceRecord::findOne(['handle' => $input]);
         if ($record) {
             $path = $record->localPath
-                ? Craft::getAlias($record->localPath)
+                ? LocalSourcePathHelper::resolve($record->localPath)
                 : $basePath . '/' . $record->handle;
 
             if (is_dir($path)) {
