@@ -13,6 +13,7 @@ use craft\base\Component;
 use craft\helpers\App;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\SourceDoc;
+use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
 use lindemannrock\logginglibrary\traits\LoggingTrait;
 
@@ -390,13 +391,12 @@ class SyncService extends Component
 
         // Use localPath if set on plugin
         if ($plugin->localPath) {
-            return Craft::getAlias($plugin->localPath);
+            return LocalSourcePathHelper::resolve($plugin->localPath);
         }
 
         // Use settings basePath + handle
         if ($settings->localPluginBasePath) {
-            $basePath = Craft::getAlias($settings->localPluginBasePath);
-            return $basePath . '/' . $plugin->handle;
+            return LocalSourcePathHelper::join((string) $settings->localPluginBasePath, $plugin->handle);
         }
 
         return null;
