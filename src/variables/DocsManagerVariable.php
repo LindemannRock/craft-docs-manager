@@ -8,10 +8,10 @@
 
 namespace lindemannrock\docsmanager\variables;
 
-use Craft;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\elements\SourceDoc;
+use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
 
 /**
@@ -208,9 +208,9 @@ class DocsManagerVariable
         $source = $this->getSource($handle);
 
         if ($source && !empty($source['localPath'])) {
-            $basePath = Craft::getAlias($source['localPath']);
+            $basePath = LocalSourcePathHelper::resolve($source['localPath']);
         } else {
-            $basePath = Craft::getAlias("@root/plugins/{$handle}");
+            $basePath = LocalSourcePathHelper::join('@root/plugins', $handle);
         }
 
         $sidebarPath = $basePath . '/docs/.sidebar.json';
