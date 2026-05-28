@@ -25,10 +25,10 @@ These settings define the defaults applied when adding a new source. Existing so
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `defaultSourceType` | `string` | `'local'` | Default source type for new sources: `local` or `github-api` |
-| `localPluginBasePath` | `string\|null` | `'@root/plugins'` | Base path for local plugin sources. Accepts Craft aliases. |
+| `localPluginBasePath` | `string\|null` | `'@root/plugins'` | Base path for local plugin sources. Accepts Craft aliases and environment variables. The resolved directory must exist. |
 | `githubToken` | `string\|null` | `null` | GitHub personal access token for GitHub API sources |
 
-`localPluginBasePath` and `githubToken` support environment variable syntax via `craft\helpers\App::env()`.
+`localPluginBasePath` supports Craft aliases such as `@root/plugins`, absolute paths to existing directories, and environment variables such as `$DOCS_PLUGIN_BASE_PATH`. In config files, `localPluginBasePath` and `githubToken` can also use `craft\helpers\App::env()`.
 
 ## Sync
 
