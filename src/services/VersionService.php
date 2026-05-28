@@ -8,9 +8,9 @@
 
 namespace lindemannrock\docsmanager\services;
 
-use Craft;
 use craft\base\Component;
 use lindemannrock\docsmanager\DocsManager;
+use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\logginglibrary\traits\LoggingTrait;
 
 /**
@@ -149,7 +149,7 @@ class VersionService extends Component
      */
     public function getLocalGitVersion(string $path): ?array
     {
-        $resolvedPath = Craft::getAlias($path);
+        $resolvedPath = LocalSourcePathHelper::resolve($path);
 
         if (!is_dir($resolvedPath . '/.git')) {
             return null;
@@ -181,7 +181,7 @@ class VersionService extends Component
      */
     public function getComposerVersion(string $path): ?array
     {
-        $resolvedPath = Craft::getAlias($path);
+        $resolvedPath = LocalSourcePathHelper::resolve($path);
         $composerFile = $resolvedPath . '/composer.json';
 
         if (!file_exists($composerFile)) {
