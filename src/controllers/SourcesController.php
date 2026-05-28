@@ -13,6 +13,7 @@ use craft\db\Query;
 use craft\helpers\App;
 use craft\web\Controller;
 use lindemannrock\docsmanager\DocsManager;
+use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -392,7 +393,7 @@ class SourcesController extends Controller
         $this->requirePermission('docsManager:editSources');
 
         $settings = DocsManager::getInstance()->getSettings();
-        $basePath = Craft::getAlias($settings->localPluginBasePath);
+        $basePath = LocalSourcePathHelper::resolve((string) $settings->localPluginBasePath);
 
         if (!is_dir($basePath)) {
             Craft::$app->getSession()->setError(Craft::t('docs-manager', 'Base path not found: {path}', ['path' => $basePath]));
