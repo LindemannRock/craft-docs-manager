@@ -99,6 +99,8 @@ return [
     'GitHub token is required. Please configure it in settings.' => 'GitHub-token er påkrævet. Konfigurér det i indstillingerne.',
     'GitHub API error: {code}' => 'GitHub API-fejl: {code}',
     'Source added: {name}' => 'Kilde tilføjet: {name}',
+    'Source ID is required for new pages.' => 'Kilde-ID er påkrævet for nye sider.',
+    'Administrative changes are disallowed in this environment.' => 'Administrative ændringer er ikke tilladt i dette miljø.',
 
     // Validation messages
     '{attribute} must start with a letter or number and may only contain lowercase letters, numbers, hyphens, and forward slashes.' => '{attribute} skal begynde med et bogstav eller tal og må kun indeholde små bogstaver, tal, bindestreger og skråstreger.',

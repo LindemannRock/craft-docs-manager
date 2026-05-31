@@ -99,6 +99,8 @@ return [
     'GitHub token is required. Please configure it in settings.' => 'GitHub-token is vereist. Configureer dit in de instellingen.',
     'GitHub API error: {code}' => 'GitHub API-fout: {code}',
     'Source added: {name}' => 'Bron toegevoegd: {name}',
+    'Source ID is required for new pages.' => 'Bron-ID is vereist voor nieuwe pagina\'s.',
+    'Administrative changes are disallowed in this environment.' => 'Beheerwijzigingen zijn niet toegestaan in deze omgeving.',
 
     // Validation messages
     '{attribute} must start with a letter or number and may only contain lowercase letters, numbers, hyphens, and forward slashes.' => '{attribute} moet beginnen met een letter of cijfer en mag alleen kleine letters, cijfers, koppeltekens en schuine strepen bevatten.',

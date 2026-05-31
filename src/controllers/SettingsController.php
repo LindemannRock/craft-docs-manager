@@ -146,7 +146,7 @@ class SettingsController extends Controller
         $this->requirePostRequest();
 
         if (!Craft::$app->getConfig()->getGeneral()->allowAdminChanges) {
-            throw new ForbiddenHttpException('Administrative changes are disallowed in this environment.');
+            throw new ForbiddenHttpException(Craft::t('docs-manager', 'Administrative changes are disallowed in this environment.'));
         }
 
         $fieldLayout = Craft::$app->getFields()->assembleLayoutFromPost();

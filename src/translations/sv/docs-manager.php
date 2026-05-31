@@ -99,6 +99,8 @@ return [
     'GitHub token is required. Please configure it in settings.' => 'GitHub-token krävs. Konfigurera det i inställningarna.',
     'GitHub API error: {code}' => 'GitHub API-fel: {code}',
     'Source added: {name}' => 'Källa tillagd: {name}',
+    'Source ID is required for new pages.' => 'Käll-ID krävs för nya sidor.',
+    'Administrative changes are disallowed in this environment.' => 'Administrativa ändringar är inte tillåtna i denna miljö.',
 
     // Validation messages
     '{attribute} must start with a letter or number and may only contain lowercase letters, numbers, hyphens, and forward slashes.' => '{attribute} måste börja med en bokstav eller siffra och får endast innehålla gemener, siffror, bindestreck och snedstreck.',

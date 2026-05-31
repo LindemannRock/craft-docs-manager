@@ -99,6 +99,8 @@ return [
     'GitHub token is required. Please configure it in settings.' => 'Se requiere un token de GitHub. Por favor, configúrelo en la configuración.',
     'GitHub API error: {code}' => 'Error de API de GitHub: {code}',
     'Source added: {name}' => 'Origen añadido: {name}',
+    'Source ID is required for new pages.' => 'El ID de origen es obligatorio para las páginas nuevas.',
+    'Administrative changes are disallowed in this environment.' => 'Los cambios administrativos no están permitidos en este entorno.',
 
     // Validation messages
     '{attribute} must start with a letter or number and may only contain lowercase letters, numbers, hyphens, and forward slashes.' => '{attribute} debe comenzar con una letra o un número y solo puede contener letras minúsculas, números, guiones y barras inclinadas.',

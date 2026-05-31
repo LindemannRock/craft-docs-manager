@@ -213,13 +213,13 @@ class PagesController extends Controller
             $this->requirePermission('docsManager:editPages');
             $page = PluginPage::find()->id($pageId)->siteId($currentSite->id)->status(null)->one();
             if (!$page) {
-                throw new NotFoundHttpException('Page not found');
+                throw new NotFoundHttpException(Craft::t('docs-manager', 'Page not found'));
             }
             $sourceId = $page->sourceId;
         } else {
             $this->requirePermission('docsManager:createPages');
             if (!$sourceId) {
-                throw new NotFoundHttpException('Source ID is required for new pages');
+                throw new NotFoundHttpException(Craft::t('docs-manager', 'Source ID is required for new pages.'));
             }
 
             $page = new PluginPage();
@@ -230,7 +230,7 @@ class PagesController extends Controller
         // Get the parent source record
         $sourceRecord = SourceRecord::findOne($sourceId);
         if (!$sourceRecord) {
-            throw new NotFoundHttpException('Source not found');
+            throw new NotFoundHttpException(Craft::t('docs-manager', 'Source not found'));
         }
 
         // Get existing page types for this source (to disable in select)
@@ -263,7 +263,7 @@ class PagesController extends Controller
             $this->requirePermission('docsManager:editPages');
             $page = PluginPage::find()->id($pageId)->status(null)->one();
             if (!$page) {
-                throw new NotFoundHttpException('Page not found');
+                throw new NotFoundHttpException(Craft::t('docs-manager', 'Page not found'));
             }
         } else {
             $this->requirePermission('docsManager:createPages');

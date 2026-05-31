@@ -218,7 +218,7 @@ class SourcesController extends Controller
             $this->requirePermission('docsManager:editSources');
             $source = SourceRecord::findOne($sourceId);
             if (!$source) {
-                throw new NotFoundHttpException('Source not found');
+                throw new NotFoundHttpException(Craft::t('docs-manager', 'Source not found'));
             }
         } else {
             $this->requirePermission('docsManager:createSources');
@@ -246,7 +246,7 @@ class SourcesController extends Controller
             $this->requirePermission('docsManager:editSources');
             $source = SourceRecord::findOne($sourceId);
             if (!$source) {
-                throw new NotFoundHttpException('Source not found');
+                throw new NotFoundHttpException(Craft::t('docs-manager', 'Source not found'));
             }
         } else {
             $this->requirePermission('docsManager:createSources');

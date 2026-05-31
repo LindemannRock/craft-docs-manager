@@ -99,6 +99,8 @@ return [
     'GitHub token is required. Please configure it in settings.' => 'GitHub トークンが必要です。設定で構成してください。',
     'GitHub API error: {code}' => 'GitHub API エラー: {code}',
     'Source added: {name}' => 'ソースを追加しました: {name}',
+    'Source ID is required for new pages.' => '新規ページにはソース ID が必要です。',
+    'Administrative changes are disallowed in this environment.' => 'この環境では管理者による変更は許可されていません。',
 
     // Validation messages
     '{attribute} must start with a letter or number and may only contain lowercase letters, numbers, hyphens, and forward slashes.' => '{attribute} は英字または数字で始まり、小文字の英字、数字、ハイフン、スラッシュのみ使用できます。',
