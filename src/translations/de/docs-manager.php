@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Feldlayout konnte nicht gespeichert werden.',
     'Settings saved.' => 'Einstellungen gespeichert.',
     'Could not save settings.' => 'Einstellungen konnten nicht gespeichert werden.',
-    'Could not save settings' => 'Einstellungen konnten nicht gespeichert werden',
     'Source saved.' => 'Quelle gespeichert.',
     'Could not save source.' => 'Quelle konnte nicht gespeichert werden.',
     'Source not found' => 'Quelle nicht gefunden',

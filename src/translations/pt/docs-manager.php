@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Não foi possível guardar a disposição de campos.',
     'Settings saved.' => 'Definições guardadas.',
     'Could not save settings.' => 'Não foi possível guardar as definições.',
-    'Could not save settings' => 'Não foi possível guardar as definições',
     'Source saved.' => 'Origem guardada.',
     'Could not save source.' => 'Não foi possível guardar a origem.',
     'Source not found' => 'Origem não encontrada',

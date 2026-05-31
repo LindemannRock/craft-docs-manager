@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Impossibile salvare il layout dei campi.',
     'Settings saved.' => 'Impostazioni salvate.',
     'Could not save settings.' => 'Impossibile salvare le impostazioni.',
-    'Could not save settings' => 'Impossibile salvare le impostazioni',
     'Source saved.' => 'Sorgente salvata.',
     'Could not save source.' => 'Impossibile salvare la sorgente.',
     'Source not found' => 'Sorgente non trovata',

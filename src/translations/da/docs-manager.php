@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Kunne ikke gemme feltlayoutet.',
     'Settings saved.' => 'Indstillingerne er gemt.',
     'Could not save settings.' => 'Kunne ikke gemme indstillingerne.',
-    'Could not save settings' => 'Kunne ikke gemme indstillingerne',
     'Source saved.' => 'Kilden er gemt.',
     'Could not save source.' => 'Kunne ikke gemme kilden.',
     'Source not found' => 'Kilden blev ikke fundet',

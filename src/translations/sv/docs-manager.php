@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Det gick inte att spara fältlayouten.',
     'Settings saved.' => 'Inställningarna sparades.',
     'Could not save settings.' => 'Det gick inte att spara inställningarna.',
-    'Could not save settings' => 'Det gick inte att spara inställningarna',
     'Source saved.' => 'Källan sparades.',
     'Could not save source.' => 'Det gick inte att spara källan.',
     'Source not found' => 'Källan hittades inte',

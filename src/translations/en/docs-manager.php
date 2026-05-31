@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Couldn\'t save field layout.',
     'Settings saved.' => 'Settings saved.',
     'Could not save settings.' => 'Could not save settings.',
-    'Could not save settings' => 'Could not save settings',
     'Source saved.' => 'Source saved.',
     'Could not save source.' => 'Could not save source.',
     'Source not found' => 'Source not found',

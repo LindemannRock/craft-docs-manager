@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Impossible d\'enregistrer la disposition des champs.',
     'Settings saved.' => 'Paramètres enregistrés.',
     'Could not save settings.' => 'Impossible d\'enregistrer les paramètres.',
-    'Could not save settings' => 'Impossible d\'enregistrer les paramètres',
     'Source saved.' => 'Source enregistrée.',
     'Could not save source.' => 'Impossible d\'enregistrer la source.',
     'Source not found' => 'Source introuvable',

@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Veldindeling kon niet worden opgeslagen.',
     'Settings saved.' => 'Instellingen opgeslagen.',
     'Could not save settings.' => 'Instellingen konden niet worden opgeslagen.',
-    'Could not save settings' => 'Instellingen konden niet worden opgeslagen',
     'Source saved.' => 'Bron opgeslagen.',
     'Could not save source.' => 'Bron kon niet worden opgeslagen.',
     'Source not found' => 'Bron niet gevonden',

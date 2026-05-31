@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'フィールドレイアウトを保存できませんでした。',
     'Settings saved.' => '設定を保存しました。',
     'Could not save settings.' => '設定を保存できませんでした。',
-    'Could not save settings' => '設定を保存できませんでした',
     'Source saved.' => 'ソースを保存しました。',
     'Could not save source.' => 'ソースを保存できませんでした。',
     'Source not found' => 'ソースが見つかりません',

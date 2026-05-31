@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'Kunne ikke lagre feltoppsettet.',
     'Settings saved.' => 'Innstillingene er lagret.',
     'Could not save settings.' => 'Kunne ikke lagre innstillingene.',
-    'Could not save settings' => 'Kunne ikke lagre innstillingene',
     'Source saved.' => 'Kilden er lagret.',
     'Could not save source.' => 'Kunne ikke lagre kilden.',
     'Source not found' => 'Kilden ble ikke funnet',

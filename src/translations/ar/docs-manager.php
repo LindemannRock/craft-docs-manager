@@ -89,7 +89,6 @@ return [
     'Couldn\'t save field layout.' => 'تعذّر حفظ تخطيط الحقول.',
     'Settings saved.' => 'تم حفظ الإعدادات.',
     'Could not save settings.' => 'تعذّر حفظ الإعدادات.',
-    'Could not save settings' => 'تعذّر حفظ الإعدادات',
     'Source saved.' => 'تم حفظ المصدر.',
     'Could not save source.' => 'تعذّر حفظ المصدر.',
     'Source not found' => 'المصدر غير موجود',
