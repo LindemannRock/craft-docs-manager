@@ -246,18 +246,16 @@
                 <dt class="heading">{{ "Kind"|t('docs-manager') }}</dt>
                 <dd class="value">{{ source.kind|capitalize }}</dd>
             </div>
-            <div class="data">
-                <dt class="heading">{{ "Status"|t('docs-manager') }}</dt>
-                <dd class="value">
-                    {% if source.enabled %}
-                        <span class="status live"></span>
-                        <span>{{ 'Enabled'|t('docs-manager') }}</span>
-                    {% else %}
-                        <span class="status disabled"></span>
-                        <span>{{ 'Disabled'|t('docs-manager') }}</span>
-                    {% endif %}
-                </dd>
-            </div>
+	            <div class="data">
+	                <dt class="heading">{{ "Status"|t('docs-manager') }}</dt>
+	                <dd class="value">
+	                    {% include 'lindemannrock-base/_components/status-dot' with {
+	                        value: source.enabled ? 'enabled' : 'disabled',
+	                        colorSet: 'status',
+	                    } only %}
+	                    <span>{{ source.enabled ? 'Enabled'|t('docs-manager') : 'Disabled'|t('docs-manager') }}</span>
+	                </dd>
+	            </div>
             <div class="data">
                 <dt class="heading">{{ "Pages"|t('docs-manager') }}</dt>
                 <dd class="value">{{ craft.docsManager.getPages(source.handle)|length }}</dd>
