@@ -1,6 +1,8 @@
 {% extends '_layouts/cp' %}
 {% import '_includes/forms.twig' as forms %}
 
+{% do view.registerAssetBundle('lindemannrock\\base\\web\\assets\\components\\ComponentsAsset') %}
+
 {% set pluginInstance = craft.app.plugins.getPlugin('docs-manager') %}
 {% set selectedSubnavItem = 'pages' %}
 
@@ -201,19 +203,38 @@
     var slugInput = document.getElementById('slug');
     var slugModified = {{ page.slug ? 'true' : 'false' }};
 
+    function normalizePathSlug(value) {
+        if (!window.lrIdentifiers) {
+            return String(value || '')
+                .toLowerCase()
+                .split('/')
+                .map(segment => segment.trim().replace(/[^a-z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^[-_]+|[-_]+$/g, ''))
+                .filter(Boolean)
+                .join('/');
+        }
+
+        return String(value || '')
+            .split('/')
+            .map(segment => window.lrIdentifiers.normalizeSlug(segment, ''))
+            .filter(Boolean)
+            .join('/');
+    }
+
     if (titleInput && slugInput) {
         titleInput.addEventListener('input', function() {
             if (!slugModified) {
-                slugInput.value = titleInput.value
-                    .toLowerCase()
-                    .replace(/[^a-z0-9\s-]/g, '')
-                    .replace(/[\s-]+/g, '-')
-                    .replace(/^-|-$/g, '');
+                slugInput.value = window.lrIdentifiers
+                    ? window.lrIdentifiers.normalizeSlug(titleInput.value, '')
+                    : normalizePathSlug(titleInput.value);
             }
         });
 
         slugInput.addEventListener('input', function() {
             slugModified = true;
+        });
+
+        slugInput.addEventListener('blur', function() {
+            slugInput.value = normalizePathSlug(slugInput.value);
         });
     }
 

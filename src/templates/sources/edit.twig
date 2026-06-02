@@ -1,5 +1,7 @@
 {% extends "_layouts/cp" %}
 
+{% do view.registerAssetBundle('lindemannrock\\base\\web\\assets\\components\\ComponentsAsset') %}
+
 {% set pluginInstance = craft.app.plugins.getPlugin('docs-manager') %}
 
 {% set title = isNew ? 'Add Source'|t('docs-manager') : source.name %}
@@ -328,6 +330,10 @@
     {% endif %}
 
     {% if isNew %}
+        window.lrIdentifiers?.bindSlugHandle('#name', '#handle', {
+            isNew: true,
+        });
+
         // Auto-load available sources when source type or kind changes
         const sourceTypeSelect = document.getElementById('sourceType');
         const kindSelect = document.getElementById('kind');
