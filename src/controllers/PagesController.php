@@ -233,20 +233,32 @@ class PagesController extends Controller
             throw new NotFoundHttpException(Craft::t('docs-manager', 'Source not found'));
         }
 
-        // Get existing page types for this source (to disable in select)
+        return $this->renderTemplate('docs-manager/pages/edit', $this->editTemplateVariables(
+            $page,
+            $sourceRecord,
+            !$pageId,
+            $currentSite->id,
+        ));
+    }
+
+    /**
+     * @return array{page: PluginPage, sourceRecord: SourceRecord, isNew: bool, existingPageTypes: array<int, string>}
+     */
+    private function editTemplateVariables(PluginPage $page, SourceRecord $sourceRecord, bool $isNew, int $siteId): array
+    {
         $existingTypes = PluginPage::find()
-            ->sourceId($sourceId)
-            ->siteId($currentSite->id)
+            ->sourceId((int)$sourceRecord->id)
+            ->siteId($siteId)
             ->status(null)
             ->select(['docsmanager_custom_pages.pageType'])
             ->column();
 
-        return $this->renderTemplate('docs-manager/pages/edit', [
+        return [
             'page' => $page,
             'sourceRecord' => $sourceRecord,
-            'isNew' => !$pageId,
+            'isNew' => $isNew,
             'existingPageTypes' => $existingTypes,
-        ]);
+        ];
     }
 
     /**
@@ -284,12 +296,18 @@ class PagesController extends Controller
             Craft::$app->getSession()->setError(Craft::t('docs-manager', 'Couldn\'t save page.'));
 
             $sourceRecord = SourceRecord::findOne($page->sourceId);
+            if (!$sourceRecord) {
+                throw new NotFoundHttpException(Craft::t('docs-manager', 'Source not found'));
+            }
 
-            return $this->renderTemplate('docs-manager/pages/edit', [
-                'page' => $page,
-                'sourceRecord' => $sourceRecord,
-                'isNew' => !$pageId,
-            ]);
+            Craft::$app->getUrlManager()->setRouteParams($this->editTemplateVariables(
+                $page,
+                $sourceRecord,
+                !$pageId,
+                (int)($page->siteId ?: Craft::$app->getSites()->getCurrentSite()->id),
+            ));
+
+            return null;
         }
 
         Craft::$app->getSession()->setNotice(Craft::t('docs-manager', 'Page saved.'));
