@@ -12,6 +12,7 @@ use Craft;
 use craft\db\Query;
 use craft\helpers\App;
 use craft\web\Controller;
+use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
@@ -212,24 +213,26 @@ class SourcesController extends Controller
     /**
      * Edit/create source
      */
-    public function actionEdit(?int $sourceId = null): Response
+    public function actionEdit(?int $sourceId = null, ?SourceRecord $source = null, ?bool $isNew = null): Response
     {
         if ($sourceId) {
             $this->requirePermission('docsManager:editSources');
-            $source = SourceRecord::findOne($sourceId);
+            $source ??= SourceRecord::findOne($sourceId);
             if (!$source) {
                 throw new NotFoundHttpException(Craft::t('docs-manager', 'Source not found'));
             }
         } else {
             $this->requirePermission('docsManager:createSources');
-            $source = new SourceRecord();
-            $source->enabled = true;
-            $source->kind = 'plugin';
+            if (!$source) {
+                $source = new SourceRecord();
+                $source->enabled = true;
+                $source->kind = 'plugin';
+            }
         }
 
         return $this->renderTemplate('docs-manager/sources/edit', [
             'source' => $source,
-            'isNew' => !$sourceId,
+            'isNew' => $isNew ?? !$sourceId,
         ]);
     }
 
@@ -258,7 +261,7 @@ class SourcesController extends Controller
         $isNewSource = !$sourceId;
 
         $source->name = $sourceData['name'] ?? null;
-        $source->handle = $sourceData['handle'] ?? null;
+        $source->handle = SlugHandleHelper::normalizeSlug($sourceData['handle'] ?? null, '');
         $source->kind = $sourceData['kind'] ?? 'plugin';
         $source->description = $sourceData['description'] ?? null;
         $source->sourceType = $sourceData['sourceType'] ?? 'local';
@@ -266,11 +269,16 @@ class SourcesController extends Controller
         $source->localPath = $sourceData['localPath'] ?? null;
         $source->enabled = (bool) ($sourceData['enabled'] ?? true);
 
+        if ($isNewSource && $source->handle !== '') {
+            $source->handle = SlugHandleHelper::makeUnique('{{%docsmanager_sources}}', 'handle', $source->handle);
+        }
+
         if (!$source->validate() || !$source->save()) {
             $this->setFailFlash(Craft::t('docs-manager', 'Could not save source.'));
 
             Craft::$app->getUrlManager()->setRouteParams([
                 'source' => $source,
+                'isNew' => $isNewSource,
             ]);
 
             return null;
@@ -433,10 +441,13 @@ class SourcesController extends Controller
             }
 
             // Check if already added
-            $sourceHandle = $handle;
+            $sourceHandle = SlugHandleHelper::normalizeSlug($handle, '');
             if (file_exists($composerFile)) {
                 $composerData = json_decode(file_get_contents($composerFile), true);
-                $sourceHandle = $composerData['extra']['handle'] ?? $handle;
+                $sourceHandle = SlugHandleHelper::normalizeSlug($composerData['extra']['handle'] ?? $handle, '');
+            }
+            if ($sourceHandle === '') {
+                continue;
             }
 
             $exists = SourceRecord::findOne(['handle' => $sourceHandle]);
@@ -465,6 +476,7 @@ class SourcesController extends Controller
                 'description' => $description,
                 'localPath' => '@root/plugins/' . $handle,
                 'kind' => $kind,
+                'sourceType' => 'local',
             ];
         }
 
@@ -526,7 +538,10 @@ class SourcesController extends Controller
                     continue;
                 }
 
-                $handle = str_replace('craft-', '', $repo['name']);
+                $handle = SlugHandleHelper::normalizeSlug(str_replace('craft-', '', $repo['name']), '');
+                if ($handle === '') {
+                    continue;
+                }
 
                 $exists = SourceRecord::findOne(['handle' => $handle]);
                 if ($exists) {
@@ -567,6 +582,7 @@ class SourcesController extends Controller
                     'description' => $repo['description'] ?? '',
                     'repositoryUrl' => $repo['html_url'],
                     'kind' => 'plugin',
+                    'sourceType' => 'github-api',
                 ];
             }
 
@@ -595,11 +611,17 @@ class SourcesController extends Controller
 
         $source = new SourceRecord();
         $source->name = $sourceData['name'];
-        $source->handle = $sourceData['handle'];
+        $source->handle = SlugHandleHelper::normalizeSlug($sourceData['handle'] ?? null, '');
         $source->kind = $sourceData['kind'] ?? 'plugin';
+        $source->sourceType = $sourceData['sourceType'] ?? (!empty($sourceData['repositoryUrl']) ? 'github-api' : 'local');
         $source->description = $sourceData['description'] ?? null;
-        $source->localPath = $sourceData['localPath'];
+        $source->repositoryUrl = $sourceData['repositoryUrl'] ?? null;
+        $source->localPath = $sourceData['localPath'] ?? null;
         $source->enabled = true;
+
+        if ($source->handle !== '') {
+            $source->handle = SlugHandleHelper::makeUnique('{{%docsmanager_sources}}', 'handle', $source->handle);
+        }
 
         if ($source->save()) {
             Craft::$app->getSession()->setNotice(Craft::t('docs-manager', 'Source added: {name}', ['name' => $source->name]));
