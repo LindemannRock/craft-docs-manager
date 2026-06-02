@@ -8,6 +8,7 @@
 
 namespace lindemannrock\docsmanager\variables;
 
+use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\elements\SourceDoc;
@@ -250,10 +251,15 @@ class DocsManagerVariable
 
             $pages = [];
             foreach ($children as $child) {
-                $dbPage = $dbPages[$child] ?? null;
+                $slug = SlugHandleHelper::normalizePathSlug((string) $child, '');
+                if ($slug === '') {
+                    continue;
+                }
+
+                $dbPage = $dbPages[$slug] ?? null;
                 $pages[] = [
-                    'slug' => $child,
-                    'title' => $dbPage?->title ?? $this->slugToTitle(basename($child)),
+                    'slug' => $slug,
+                    'title' => $dbPage?->title ?? $this->slugToTitle(basename($slug)),
                     'description' => $dbPage?->description ?? '',
                 ];
             }
@@ -272,10 +278,7 @@ class DocsManagerVariable
 
     private function titleToSlug(string $title): string
     {
-        $slug = strtolower($title);
-        $slug = preg_replace('/[^a-z0-9\s-]/', '', $slug);
-        $slug = preg_replace('/[\s-]+/', '-', $slug);
-        return trim($slug, '-');
+        return SlugHandleHelper::normalizeSlug($title, '');
     }
 
     private function slugToTitle(string $slug): string
