@@ -11,6 +11,7 @@ namespace lindemannrock\docsmanager\records;
 use Craft;
 use craft\db\ActiveRecord;
 use craft\helpers\App;
+use lindemannrock\base\helpers\SlugHandleHelper;
 
 /**
  * Source Record
@@ -43,6 +44,18 @@ class SourceRecord extends ActiveRecord
     public static function tableName(): string
     {
         return '{{%docsmanager_sources}}';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function beforeValidate(): bool
+    {
+        if ($this->handle !== null) {
+            $this->handle = SlugHandleHelper::normalizeSlug($this->handle, '');
+        }
+
+        return parent::beforeValidate();
     }
 
     /**

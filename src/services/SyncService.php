@@ -11,6 +11,7 @@ namespace lindemannrock\docsmanager\services;
 use Craft;
 use craft\base\Component;
 use craft\helpers\App;
+use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\SourceDoc;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
@@ -135,9 +136,19 @@ class SyncService extends Component
 
                 foreach ($children as $childIndex => $childPath) {
                     try {
+                        $slug = SlugHandleHelper::normalizePathSlug((string) $childPath, '');
+                        if ($slug === '') {
+                            $results['errors'][] = "Failed to sync '{$childPath}': normalized slug is empty";
+                            continue;
+                        }
+                        if (isset($syncedSlugs[$slug])) {
+                            $results['errors'][] = "Failed to sync '{$childPath}': normalized slug '{$slug}' is duplicated in the sidebar";
+                            continue;
+                        }
+
                         $globalOrder++;
                         $this->syncPageFromFile($plugin, $pluginPath, $sectionTitle, $childPath, $globalOrder);
-                        $syncedSlugs[] = $childPath;
+                        $syncedSlugs[$slug] = true;
                         $results['pages']++;
                     } catch (\Exception $e) {
                         $results['errors'][] = "Failed to sync '{$childPath}': {$e->getMessage()}";
@@ -146,7 +157,7 @@ class SyncService extends Component
             }
 
             // 8. Cleanup orphan pages (pages no longer in sidebar)
-            $this->cleanupOrphanPages($plugin->id, $syncedSlugs);
+            $this->cleanupOrphanPages($plugin->id, array_keys($syncedSlugs));
 
             // 9. Update source last synced time
             $plugin->lastSyncedAt = gmdate('Y-m-d H:i:s');
@@ -211,11 +222,14 @@ class SyncService extends Component
         // Extract title from first H1 heading or use filename
         $title = $this->extractTitle($markdown, $filePath);
 
-        // Use full path as slug to support sub-path URLs (e.g., "get-started/requirements")
-        $slug = $filePath;
+        // Use normalized full path as slug to support sub-path URLs (e.g., "get-started/requirements")
+        $slug = SlugHandleHelper::normalizePathSlug($filePath, '');
+        if ($slug === '') {
+            throw new \Exception("Normalized slug is empty for file path: {$filePath}");
+        }
 
         // Create category key from section title (e.g., "Get Started" → "get-started")
-        $categoryKey = $this->titleToSlug($category);
+        $categoryKey = SlugHandleHelper::normalizeSlug($category, '');
 
         // Find existing element or create new one
         $page = SourceDoc::find()
@@ -326,10 +340,7 @@ class SyncService extends Component
      */
     protected function titleToSlug(string $title): string
     {
-        $slug = strtolower($title);
-        $slug = preg_replace('/[^a-z0-9\s-]/', '', $slug);
-        $slug = preg_replace('/[\s-]+/', '-', $slug);
-        return trim($slug, '-');
+        return SlugHandleHelper::normalizeSlug($title, '');
     }
 
     /**
@@ -361,6 +372,11 @@ class SyncService extends Component
      */
     protected function getOrCreatePlugin(string $handle): ?SourceRecord
     {
+        $handle = SlugHandleHelper::normalizeSlug($handle, '');
+        if ($handle === '') {
+            return null;
+        }
+
         $plugin = SourceRecord::findOne(['handle' => $handle]);
 
         if (!$plugin) {

@@ -12,6 +12,7 @@ use Craft;
 use craft\base\Element;
 use craft\elements\db\ElementQueryInterface;
 use craft\elements\User;
+use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\db\SourceDocQuery;
 use lindemannrock\docsmanager\records\DocPageContentRecord;
@@ -315,6 +316,21 @@ class SourceDoc extends Element
     public function afterPopulate(): void
     {
         $this->loadContent();
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function beforeValidate(): bool
+    {
+        if ($this->slug !== null) {
+            $this->slug = SlugHandleHelper::normalizePathSlug($this->slug, '');
+        }
+        if ($this->category !== null) {
+            $this->category = SlugHandleHelper::normalizeSlug($this->category, '');
+        }
+
+        return parent::beforeValidate();
     }
 
     /**

@@ -14,6 +14,7 @@ use craft\elements\db\ElementQueryInterface;
 use craft\elements\User;
 use craft\helpers\UrlHelper;
 use craft\models\FieldLayout;
+use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\db\PluginPageQuery;
 use lindemannrock\docsmanager\records\PluginPageRecord;
@@ -317,6 +318,18 @@ class PluginPage extends Element
         $rules[] = [['pageType'], 'validateUniquePageType'];
 
         return $rules;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function beforeValidate(): bool
+    {
+        if ($this->slug !== null) {
+            $this->slug = SlugHandleHelper::normalizePathSlug($this->slug, '');
+        }
+
+        return parent::beforeValidate();
     }
 
     public function validateSourceExists(string $attribute): void
