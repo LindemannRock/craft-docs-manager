@@ -153,22 +153,45 @@
     </div>
 
     {% if page.id %}
-        <div class="meta read-only">
+        <dl class="meta read-only">
             <div class="data">
-                <h5 class="heading">{{ 'Source'|t('docs-manager') }}</h5>
-                <div class="value">
-                    <a href="{{ url('docs-manager/sources/' ~ sourceRecord.id) }}">{{ sourceRecord.name }}</a>
-                </div>
+                <dt class="heading">{{ "ID"|t('docs-manager') }}</dt>
+                <dd class="value">{{ page.id }}</dd>
             </div>
             <div class="data">
-                <h5 class="heading">{{ 'Created at'|t('docs-manager') }}</h5>
-                <div class="value">{{ page.dateCreated|lrDatetime }}</div>
+                <dt class="heading">{{ "Status"|t('docs-manager') }}</dt>
+                <dd class="value">
+                    {% include 'lindemannrock-base/_components/status-dot' with {
+                        value: page.enabled ? 'enabled' : 'disabled',
+                        colorSet: 'status',
+                    } only %}
+                    <span>{{ page.enabled ? 'Enabled'|t('docs-manager') : 'Disabled'|t('docs-manager') }}</span>
+                </dd>
+            </div>
+            {% set pageTypeLabels = {features: 'Features', faq: 'FAQ', support: 'Support', pricing: 'Pricing', custom: 'Custom'} %}
+            <div class="data">
+                <dt class="heading">{{ "Type"|t('docs-manager') }}</dt>
+                <dd class="value">
+                    {% include 'lindemannrock-base/_components/status-dot' with {
+                        value: page.pageType,
+                        colorSet: 'pageType',
+                    } only %}
+                    <span>{{ pageTypeLabels[page.pageType] ?? page.pageType|capitalize }}</span>
+                </dd>
             </div>
             <div class="data">
-                <h5 class="heading">{{ 'Updated at'|t('docs-manager') }}</h5>
-                <div class="value">{{ page.dateUpdated|lrDatetime }}</div>
+                <dt class="heading">{{ "Source"|t('docs-manager') }}</dt>
+                <dd class="value"><a href="{{ url('docs-manager/sources/' ~ sourceRecord.id) }}">{{ sourceRecord.name }}</a></dd>
             </div>
-        </div>
+            <div class="data">
+                <dt class="heading">{{ "Created at"|t('docs-manager') }}</dt>
+                <dd class="value">{{ page.dateCreated|lrDatetime }}</dd>
+            </div>
+            <div class="data">
+                <dt class="heading">{{ "Updated at"|t('docs-manager') }}</dt>
+                <dd class="value">{{ page.dateUpdated|lrDatetime }}</dd>
+            </div>
+        </dl>
     {% endif %}
 {% endblock %}
 
