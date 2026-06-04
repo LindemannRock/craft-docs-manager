@@ -2,6 +2,30 @@
 
 Docs Manager provides console commands for generating docs skeletons, migrating READMEs, syncing sources, and installing frontend templates.
 
+## Command Help
+
+Use the plugin help command when you need to discover available commands or confirm the correct command group.
+
+```bash title="PHP"
+php craft docs-manager/help
+php craft docs-manager/help sync/plugin
+```
+
+```bash title="DDEV"
+ddev craft docs-manager/help
+ddev craft docs-manager/help sync/plugin
+```
+
+Craft's native help also works when you already know the exact command:
+
+```bash title="PHP"
+php craft help docs-manager/sync/plugin
+```
+
+```bash title="DDEV"
+ddev craft help docs-manager/sync/plugin
+```
+
 ## Plugin Identifier @since(5.0.0)
 
 All commands that accept a `<plugin>` argument resolve the input flexibly:
@@ -39,17 +63,17 @@ ddev craft docs-manager/docs/create --plugin=<plugin>
 |--------|-------------|
 | `--plugin=<handle>` | Plugin handle to generate docs for |
 | `--force` | Overwrite existing files |
-| `--dryRun` | Preview what would be generated without writing any files |
+| `--dry-run` | Preview what would be generated without writing any files. `--dryRun` is also accepted for backward compatibility |
 | `--verbose` | Show detailed extraction counts (settings, variables, commands, etc.) |
 
 Preview without writing:
 
 ```bash title="PHP"
-php craft docs-manager/docs/create --plugin=search-manager --dryRun --verbose
+php craft docs-manager/docs/create --plugin=search-manager --dry-run --verbose
 ```
 
 ```bash title="DDEV"
-ddev craft docs-manager/docs/create --plugin=search-manager --dryRun --verbose
+ddev craft docs-manager/docs/create --plugin=search-manager --dry-run --verbose
 ```
 
 ---
@@ -71,7 +95,7 @@ ddev craft docs-manager/docs/migrate --plugin=<plugin>
 | Option | Description |
 |--------|-------------|
 | `--plugin=<handle>` | Plugin handle to migrate docs for |
-| `--dryRun` | Preview what would be generated without writing any files |
+| `--dry-run` | Preview what would be generated without writing any files. `--dryRun` is also accepted for backward compatibility |
 | `--verbose` | Show section-by-section extraction details |
 
 > [!NOTE]
