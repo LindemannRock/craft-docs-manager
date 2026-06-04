@@ -246,6 +246,8 @@ class PagesController extends Controller
      */
     private function editTemplateVariables(PluginPage $page, SourceRecord $sourceRecord, bool $isNew, int $siteId): array
     {
+        $page->siteId = $siteId;
+
         $existingTypes = PluginPage::find()
             ->sourceId((int)$sourceRecord->id)
             ->siteId($siteId)
@@ -284,6 +286,7 @@ class PagesController extends Controller
 
         $page->title = $request->getBodyParam('title');
         $page->sourceId = (int) $request->getBodyParam('sourceId');
+        $page->siteId = (int) $request->getBodyParam('siteId', Craft::$app->getSites()->getCurrentSite()->id);
         $page->pageType = $request->getBodyParam('pageType');
         $page->slug = $request->getBodyParam('slug');
         $page->order = (int) $request->getBodyParam('order', 0);

@@ -10,6 +10,7 @@
 {% set fullPageForm = true %}
 {% set saveShortcutRedirect = cpUrl('docs-manager/pages/{id}') %}
 {% set retainScrollOnSaveShortcut = true %}
+{% set errorSummary = '' %}
 
 {# Site crumb for multi-site #}
 {% set crumbs = [] %}
@@ -44,6 +45,14 @@
 ]) %}
 
 {% set fieldLayout = page.getFieldLayout() %}
+
+{% if page.hasErrors() %}
+    {% set errorSummary = include('lindemannrock-base/_partials/error-summary', {
+        errors: page.getErrors(),
+        linkMode: 'field-id',
+        translationCategory: 'docs-manager'
+    })|trim %}
+{% endif %}
 
 {% set existingPageTypes = existingPageTypes ?? [] %}
 {% set currentType = page.pageType ?? null %}
@@ -89,16 +98,9 @@
     {{ actionInput('docs-manager/pages/save') }}
     {{ redirectInput('docs-manager/pages?sourceId=' ~ sourceRecord.id) }}
     {{ hiddenInput('sourceId', sourceRecord.id) }}
+    {{ hiddenInput('siteId', page.siteId ?? craft.app.sites.currentSite.id) }}
     {% if page.id %}
         {{ hiddenInput('pageId', page.id) }}
-    {% endif %}
-
-    {% if page.hasErrors() %}
-        {{ include('lindemannrock-base/_partials/error-summary', {
-            errors: page.getErrors(),
-            linkMode: 'field-id',
-            translationCategory: 'docs-manager'
-        }) }}
     {% endif %}
 
     {{ forms.textField({
