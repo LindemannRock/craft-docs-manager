@@ -25,30 +25,31 @@ ddev craft docs-manager/sync/plugin lindemannrock-base # DB handle → works dir
 
 Scans a plugin's PHP source and generates the auto-generated doc files: `configuration.md`, `permissions.md`, `console-commands.md`, `events.md`, `template-variables.md`, `twig-globals.md`, `shared-features.md`, `.sidebar.json`, and `plugin.json`.
 
-The `<plugin>` argument is optional. If omitted and the command is run from inside a plugin directory (one with a `composer.json`), the plugin is auto-detected from the current directory.
+The `--plugin` option is optional. If omitted and the command is run from inside a plugin directory (one with a `composer.json`), the plugin is auto-detected from the current directory.
 
 ```bash title="PHP"
-php craft docs-manager/docs/create <plugin>
+php craft docs-manager/docs/create --plugin=<plugin>
 ```
 
 ```bash title="DDEV"
-ddev craft docs-manager/docs/create <plugin>
+ddev craft docs-manager/docs/create --plugin=<plugin>
 ```
 
 | Option | Description |
 |--------|-------------|
+| `--plugin=<handle>` | Plugin handle to generate docs for |
 | `--force` | Overwrite existing files |
-| `--dry-run` | Preview what would be generated without writing any files |
+| `--dryRun` | Preview what would be generated without writing any files |
 | `--verbose` | Show detailed extraction counts (settings, variables, commands, etc.) |
 
 Preview without writing:
 
 ```bash title="PHP"
-php craft docs-manager/docs/create search-manager --dry-run --verbose
+php craft docs-manager/docs/create --plugin=search-manager --dryRun --verbose
 ```
 
 ```bash title="DDEV"
-ddev craft docs-manager/docs/create search-manager --dry-run --verbose
+ddev craft docs-manager/docs/create --plugin=search-manager --dryRun --verbose
 ```
 
 ---
@@ -57,19 +58,20 @@ ddev craft docs-manager/docs/create search-manager --dry-run --verbose
 
 Extracts sections from a plugin's `README.md` and writes them into structured doc files under `docs/`.
 
-The `<plugin>` argument is optional. If omitted and the command is run from inside a plugin directory, the plugin is auto-detected from the current directory.
+The `--plugin` option is optional. If omitted and the command is run from inside a plugin directory, the plugin is auto-detected from the current directory.
 
 ```bash title="PHP"
-php craft docs-manager/docs/migrate <plugin>
+php craft docs-manager/docs/migrate --plugin=<plugin>
 ```
 
 ```bash title="DDEV"
-ddev craft docs-manager/docs/migrate <plugin>
+ddev craft docs-manager/docs/migrate --plugin=<plugin>
 ```
 
 | Option | Description |
 |--------|-------------|
-| `--dry-run` | Preview what would be generated without writing any files |
+| `--plugin=<handle>` | Plugin handle to migrate docs for |
+| `--dryRun` | Preview what would be generated without writing any files |
 | `--verbose` | Show section-by-section extraction details |
 
 > [!NOTE]
@@ -178,4 +180,3 @@ php craft docs-manager/templates/install
 ```bash title="DDEV"
 ddev craft docs-manager/templates/install
 ```
-

@@ -40,6 +40,12 @@ class DocsController extends Controller
     public bool $verbose = false;
 
     /**
+     * @var string|null Plugin handle for docs create/migrate commands.
+     * @since 5.1.0
+     */
+    public ?string $plugin = null;
+
+    /**
      * @inheritdoc
      */
     public function options($actionID): array
@@ -48,23 +54,28 @@ class DocsController extends Controller
         $options[] = 'dryRun';
         $options[] = 'force';
         $options[] = 'verbose';
+
+        if (in_array($actionID, ['create', 'migrate'], true)) {
+            $options[] = 'plugin';
+        }
+
         return $options;
     }
 
     /**
      * Generate documentation from code (NEW - extracts from PHP source)
      *
-     * Usage: php craft docs-manager/docs/create translation-manager
+     * Usage: php craft docs-manager/docs/create --plugin=translation-manager
      *
-     * @param string|null $plugin Plugin handle (auto-detect if in plugin directory)
      * @return int Exit code
      */
-    public function actionCreate(?string $plugin = null): int
+    public function actionCreate(): int
     {
         $this->stdout("Docs Manager Generator v2\n", Console::FG_CYAN);
         $this->stdout("Extracts documentation from code\n\n", Console::FG_GREY);
 
         // 1. Determine plugin path
+        $plugin = $this->plugin;
         if (!$plugin) {
             // Try to detect from current directory
             $cwd = getcwd();
@@ -72,7 +83,7 @@ class DocsController extends Controller
                 $plugin = basename($cwd);
             } else {
                 $this->stderr("Error: Could not determine plugin path.\n", Console::FG_RED);
-                $this->stderr("Usage: php craft docs-manager/docs/create <plugin-handle>\n", Console::FG_YELLOW);
+                $this->stderr("Usage: php craft docs-manager/docs/create --plugin=<plugin-handle>\n", Console::FG_YELLOW);
                 return ExitCode::UNSPECIFIED_ERROR;
             }
         }
@@ -80,7 +91,7 @@ class DocsController extends Controller
         $resolved = $this->resolvePluginPath($plugin);
         if (!$resolved) {
             $this->stderr("Error: Could not resolve plugin \"{$plugin}\" — not a known handle or folder.\n", Console::FG_RED);
-            $this->stderr("Usage: php craft docs-manager/docs/create <plugin-handle>\n", Console::FG_YELLOW);
+            $this->stderr("Usage: php craft docs-manager/docs/create --plugin=<plugin-handle>\n", Console::FG_YELLOW);
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
@@ -194,29 +205,29 @@ class DocsController extends Controller
     /**
      * Migrate README.md sections to structured documentation files
      *
-     * Usage: php craft docs-manager/docs/migrate translation-manager
+     * Usage: php craft docs-manager/docs/migrate --plugin=translation-manager
      *
      * This command:
      * - Parses README.md and extracts sections (## and ### headings)
      * - Consolidates existing uppercase files (LOGGING.md, CONFIGURATION.md)
      * - Creates structured doc files (feature-tour/, get-started/, developers/, etc.)
      *
-     * @param string|null $plugin Plugin handle (auto-detect if in plugin directory)
      * @return int Exit code
      */
-    public function actionMigrate(?string $plugin = null): int
+    public function actionMigrate(): int
     {
         $this->stdout("README Migration Tool\n", Console::FG_CYAN);
         $this->stdout("Extracts README sections into structured docs\n\n", Console::FG_GREY);
 
         // 1. Determine plugin path
+        $plugin = $this->plugin;
         if (!$plugin) {
             $cwd = getcwd();
             if ($cwd !== false && str_contains($cwd, '/plugins/') && file_exists($cwd . '/composer.json')) {
                 $plugin = basename($cwd);
             } else {
                 $this->stderr("Error: Could not determine plugin path.\n", Console::FG_RED);
-                $this->stderr("Usage: php craft docs-manager/docs/migrate <plugin-handle>\n", Console::FG_YELLOW);
+                $this->stderr("Usage: php craft docs-manager/docs/migrate --plugin=<plugin-handle>\n", Console::FG_YELLOW);
                 return ExitCode::UNSPECIFIED_ERROR;
             }
         }
@@ -224,7 +235,7 @@ class DocsController extends Controller
         $resolved = $this->resolvePluginPath($plugin);
         if (!$resolved) {
             $this->stderr("Error: Could not resolve plugin \"{$plugin}\" — not a known handle or folder.\n", Console::FG_RED);
-            $this->stderr("Usage: php craft docs-manager/docs/migrate <plugin-handle>\n", Console::FG_YELLOW);
+            $this->stderr("Usage: php craft docs-manager/docs/migrate --plugin=<plugin-handle>\n", Console::FG_YELLOW);
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
