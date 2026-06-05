@@ -24,6 +24,12 @@ Docs Manager schedules one recurring queue job for automatic source sync. If the
 
 The queued job description shows when that specific queued row is due to run.
 
+## Settings Save Shows a Validation Error
+
+Numeric settings such as font size and items per page must be whole numbers within the allowed range. If a value is invalid, Docs Manager keeps you on the same settings page and shows the field error inline.
+
+When a setting is overridden in `config/docs-manager.php`, the Control Panel field is skipped during save. Change the config file value instead.
+
 ## Pages Show 404
 
 - Verify `config/routes.php` has both doc routes (category/page and page-only)

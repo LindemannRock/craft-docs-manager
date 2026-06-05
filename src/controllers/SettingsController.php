@@ -11,6 +11,7 @@ namespace lindemannrock\docsmanager\controllers;
 use Craft;
 use craft\models\FieldLayout;
 use craft\web\Controller;
+use lindemannrock\base\helpers\SettingsPostHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\models\Settings;
@@ -188,44 +189,19 @@ class SettingsController extends Controller
         $oldSyncSchedule = $settings->syncSchedule;
         $settingsData = Craft::$app->getRequest()->getBodyParam('settings', []);
 
-        // Handle enabledSites checkbox group
-        if (isset($settingsData['enabledSites'])) {
-            if (is_array($settingsData['enabledSites'])) {
-                $settingsData['enabledSites'] = array_map('intval', array_filter($settingsData['enabledSites']));
-            } else {
-                $settingsData['enabledSites'] = [];
-            }
-        } else {
-            $settingsData['enabledSites'] = [];
-        }
+        $result = SettingsPostHelper::apply(
+            model: $settings,
+            postedValues: is_array($settingsData) ? $settingsData : [],
+            allowedAttributes: $this->_validationAttributesForSection($section),
+            isOverridden: fn(string $attribute): bool => $settings->isOverriddenByConfig($attribute),
+            adapters: [
+                'enabledSites' => $this->enabledSitesAdapter(...),
+            ],
+        );
 
-        foreach ($settingsData as $key => $value) {
-            if (!$settings->isOverriddenByConfig($key) && property_exists($settings, $key)) {
-                // Multi-state selects (e.g. "Use global default" = '') need '' → null
-                // so nullable properties hold null, not a coerced false / 0.
-                if ($value === '') {
-                    $type = (new \ReflectionProperty($settings, $key))->getType();
-                    if ($type instanceof \ReflectionNamedType && $type->allowsNull()) {
-                        $value = null;
-                    }
-                }
+        $attributesToValidate = $result->attributesToValidate;
 
-                $setterMethod = 'set' . ucfirst($key);
-                if (method_exists($settings, $setterMethod)) {
-                    $settings->$setterMethod($value);
-                } else {
-                    $settings->$key = $value;
-                }
-            }
-        }
-
-        $attributesToValidate = $this->_validationAttributesForSection($section);
-        $attributesToValidate = array_values(array_filter(
-            $attributesToValidate,
-            fn(string $attribute): bool => !$settings->isOverriddenByConfig($attribute),
-        ));
-
-        if (!$settings->validate($attributesToValidate)) {
+        if ($result->hasErrors || !$settings->validate($attributesToValidate)) {
             Craft::$app->getSession()->setError(Craft::t('docs-manager', 'Could not save settings.'));
 
             $template = "docs-manager/settings/{$section}";
@@ -300,5 +276,19 @@ class SettingsController extends Controller
             'advanced' => ['autoSync', 'syncSchedule'],
             default => [],
         };
+    }
+
+    /**
+     * Normalizes posted site ID checkboxes before typed POST assignment.
+     *
+     * @return array<int, int>
+     */
+    private function enabledSitesAdapter(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_map('intval', array_filter($value)));
     }
 }
