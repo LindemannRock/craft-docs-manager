@@ -54,6 +54,22 @@ final class SchedulerPatternTest extends TestCase
         $this->assertSame(2, $this->countQueueRows('SyncAllPluginsJob'));
     }
 
+    public function testBootstrapDoesNotDuplicateExistingDelayedSyncRow(): void
+    {
+        $settings = DocsManager::$plugin->getSettings();
+        $settings->autoSync = true;
+        $settings->syncSchedule = 'hourly';
+
+        Craft::$app->getQueue()->delay(300)->push(new SyncAllPluginsJob([
+            'reschedule' => true,
+        ]));
+        $this->assertSame(1, $this->countQueueRows('SyncAllPluginsJob'));
+
+        $this->invokePrivate(DocsManager::$plugin, 'scheduleSyncJob');
+
+        $this->assertSame(1, $this->countQueueRows('SyncAllPluginsJob'));
+    }
+
     public function testSyncScheduleOptionsUseBaseCuratedList(): void
     {
         $options = DocsManager::$plugin->getSettings()->getSyncScheduleOptions();

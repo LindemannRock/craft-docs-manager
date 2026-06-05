@@ -464,11 +464,7 @@ class DocsManager extends BasePlugin
             return;
         }
 
-        $existingJob = (new \craft\db\Query())
-            ->from('{{%queue}}')
-            ->where(['like', 'job', 'docsmanager'])
-            ->andWhere(['like', 'job', 'SyncAllPluginsJob'])
-            ->exists();
+        $existingJob = $this->hasPendingSyncJob();
 
         if (!$existingJob) {
             $initialDelay = 5 * 60;
@@ -529,5 +525,19 @@ class DocsManager extends BasePlugin
                 ['like', 'job', 'SyncAllPluginsJob'],
             ])
             ->execute();
+    }
+
+    /**
+     * Check whether a pending automatic sync job is already queued.
+     */
+    private function hasPendingSyncJob(): bool
+    {
+        return (new \craft\db\Query())
+            ->from('{{%queue}}')
+            ->where(['like', 'job', 'docsmanager'])
+            ->andWhere(['like', 'job', 'SyncAllPluginsJob'])
+            ->andWhere(['fail' => false])
+            ->andWhere(['timeUpdated' => null])
+            ->exists();
     }
 }
