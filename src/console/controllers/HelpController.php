@@ -25,7 +25,10 @@ final class HelpController extends AbstractHelpController
         return [
             'title' => 'Docs Manager',
             'pluginHandle' => 'docs-manager',
-            'commandPrefix' => 'ddev craft',
+            'commandPrefixes' => [
+                'php craft',
+                'ddev craft',
+            ],
             'summary' => 'Use these commands to generate plugin docs, migrate READMEs, sync documentation sources, inspect detected versions, test markdown parsing, and install starter frontend templates.',
             'common' => [
                 'sync/plugin',
