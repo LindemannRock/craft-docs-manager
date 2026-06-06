@@ -29,35 +29,15 @@ final class SlugHandleRolloutTest extends TestCase
      */
     private array $sourceIds = [];
 
-    /**
-     * @var list<int>
-     */
-    private array $elementIds = [];
-
-    /**
-     * @var list<string>
-     */
-    private array $fixtureRoots = [];
-
     protected function tearDown(): void
     {
-        foreach (array_reverse($this->elementIds) as $elementId) {
-            $element = SourceDoc::find()->id($elementId)->status(null)->one()
-                ?? PluginPage::find()->id($elementId)->status(null)->one();
-            if ($element !== null) {
-                Craft::$app->getElements()->deleteElement($element, true);
+        try {
+            parent::tearDown();
+        } finally {
+            foreach (array_reverse($this->sourceIds) as $sourceId) {
+                SourceRecord::deleteAll(['id' => $sourceId]);
             }
         }
-
-        foreach (array_reverse($this->sourceIds) as $sourceId) {
-            SourceRecord::deleteAll(['id' => $sourceId]);
-        }
-
-        foreach (array_reverse($this->fixtureRoots) as $root) {
-            $this->deleteDirectory($root);
-        }
-
-        parent::tearDown();
     }
 
     public function testSourceHandleNormalizesBeforeSave(): void
@@ -79,11 +59,7 @@ final class SlugHandleRolloutTest extends TestCase
         $page->siteId = Craft::$app->getSites()->getPrimarySite()->id;
         $page->setEnabledForSite(true);
 
-        $this->assertTrue(
-            Craft::$app->getElements()->saveElement($page),
-            'Custom page should save: ' . json_encode($page->getErrors()),
-        );
-        $this->elementIds[] = (int)$page->id;
+        $this->saveTestElement($page, true);
 
         $this->assertSame('guides/my-test-page', $page->slug);
     }
@@ -107,7 +83,7 @@ final class SlugHandleRolloutTest extends TestCase
         );
 
         foreach (SourceDoc::find()->sourceId((int)$source->id)->status(null)->all() as $page) {
-            $this->elementIds[] = (int)$page->id;
+            $this->trackElementForCleanup((int)$page->id);
         }
     }
 
@@ -133,8 +109,7 @@ final class SlugHandleRolloutTest extends TestCase
      */
     private function createDocsFixture(array $files, array $sidebar): string
     {
-        $root = sys_get_temp_dir() . '/docs-manager-test-' . uniqid('', true);
-        $this->fixtureRoots[] = $root;
+        $root = $this->createTrackedTempDirectory('docs-manager-test-');
         $docsRoot = $root . '/docs';
         mkdir($docsRoot, 0777, true);
 
@@ -149,32 +124,5 @@ final class SlugHandleRolloutTest extends TestCase
         }
 
         return $root;
-    }
-
-    private function deleteDirectory(string $path): void
-    {
-        if (!is_dir($path)) {
-            return;
-        }
-
-        $items = scandir($path);
-        if ($items === false) {
-            return;
-        }
-
-        foreach ($items as $item) {
-            if ($item === '.' || $item === '..') {
-                continue;
-            }
-
-            $itemPath = $path . DIRECTORY_SEPARATOR . $item;
-            if (is_dir($itemPath)) {
-                $this->deleteDirectory($itemPath);
-            } elseif (is_file($itemPath)) {
-                unlink($itemPath);
-            }
-        }
-
-        rmdir($path);
     }
 }

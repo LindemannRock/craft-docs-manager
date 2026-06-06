@@ -10,7 +10,6 @@ declare(strict_types=1);
 
 namespace lindemannrock\docsmanager\tests\Integration;
 
-use craft\helpers\FileHelper;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\models\Settings;
 use lindemannrock\docsmanager\records\SourceRecord;
@@ -24,21 +23,12 @@ final class LocalSourcePathTest extends TestCase
     private const BASE_ENV = 'LR_DOCS_MANAGER_BASE_PATH_TEST';
     private const SOURCE_ENV = 'LR_DOCS_MANAGER_SOURCE_PATH_TEST';
 
-    private array $tempDirs = [];
-
     protected function tearDown(): void
     {
         foreach ([self::BASE_ENV, self::SOURCE_ENV] as $envName) {
             putenv($envName);
             unset($_ENV[$envName], $_SERVER[$envName]);
         }
-
-        foreach ($this->tempDirs as $dir) {
-            if (is_dir($dir)) {
-                FileHelper::removeDirectory($dir);
-            }
-        }
-        $this->tempDirs = [];
 
         parent::tearDown();
     }
@@ -81,11 +71,7 @@ final class LocalSourcePathTest extends TestCase
 
     private function makeTempDir(): string
     {
-        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'docs-manager-path-' . bin2hex(random_bytes(4));
-        FileHelper::createDirectory($dir);
-        $this->tempDirs[] = $dir;
-
-        return $dir;
+        return $this->createTrackedTempDirectory('docs-manager-path-');
     }
 
     private function setEnvValue(string $name, string $value): void
