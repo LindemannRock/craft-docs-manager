@@ -223,7 +223,7 @@ return [
     'No new sources found for this kind.' => 'この種類の新しいソースが見つかりません。',
     'Failed to load local sources' => 'ローカルソースの読み込みに失敗しました',
     'Loading GitHub repositories...' => 'GitHub リポジトリを読み込んでいます...',
-    'Sources missing docs/index.json:' => 'docs/index.json がないソース:',
+    'Sources missing docs/index.json:' => 'docs/index.json がないソース :',
     'Failed to load GitHub repositories. Check your GitHub token in settings.' => 'GitHub リポジトリの読み込みに失敗しました。設定で GitHub トークンを確認してください。',
     'Select a source to add...' => '追加するソースを選択してください...',
     'Select a source from the list to auto-fill the form below' => 'リストからソースを選択すると、以下のフォームが自動的に入力されます',
