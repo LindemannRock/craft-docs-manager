@@ -144,9 +144,6 @@ class DocsManager extends BasePlugin
         );
         PluginHelper::applyPluginNameFromConfig($this);
 
-        // Register Twig extension for plugin name helpers
-        Craft::$app->view->registerTwigExtension(new \lindemannrock\docsmanager\twigextensions\PluginNameExtension());
-
         // Register Template Roots
         Event::on(
             View::class,

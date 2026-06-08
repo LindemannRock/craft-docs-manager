@@ -1,10 +1,10 @@
 # Twig Globals
 
-Docs Manager registers a global Twig variable named `docsManagerHelper` via its `PluginNameExtension` Twig extension, which is initialized during plugin bootstrap. It is available in all CP templates rendered while Docs Manager is active.
+Docs Manager registers a global Twig variable named `docsManagerHelper` through the base plugin bootstrap. It is available in all CP templates rendered while Docs Manager is active.
 
 ## `docsManagerHelper` @since(5.0.0)
 
-The helper is an instance of `PluginNameHelper` — a proxy to the plugin's Settings model that exposes name variants as Twig-friendly properties.
+The helper is an instance of the base plugin-name helper — a proxy to the plugin's Settings model that exposes name variants as Twig-friendly properties.
 
 ### Properties
 
