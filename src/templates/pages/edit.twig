@@ -174,7 +174,7 @@
                     <span>{{ page.enabled ? 'Enabled'|t('docs-manager') : 'Disabled'|t('docs-manager') }}</span>
                 </dd>
             </div>
-            {% set pageTypeLabels = {features: 'Features', faq: 'FAQ', support: 'Support', pricing: 'Pricing', custom: 'Custom'} %}
+            {% set pageTypeLabels = {features: 'Features'|t('docs-manager'), faq: 'FAQ'|t('docs-manager'), support: 'Support'|t('docs-manager'), pricing: 'Pricing'|t('docs-manager'), custom: 'Custom'|t('docs-manager')} %}
             <div class="data">
                 <dt class="heading">{{ "Type"|t('docs-manager') }}</dt>
                 <dd class="value">
