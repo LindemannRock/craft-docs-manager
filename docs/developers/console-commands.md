@@ -105,26 +105,27 @@ ddev craft docs-manager/docs/migrate --plugin=<plugin>
 
 ## Generate Hero Banner @since(5.2.0)
 
-Generates a 1280×360 `hero.webp` banner for a plugin's README, derived automatically from the plugin: the accent colour from its `src/icon.svg`, the name and tagline from its `composer.json`, and the LindemannRock background mark.
+Generates a 1280×360 `hero.webp` banner for a plugin's README, derived entirely from the plugin's own assets: the accent and glyph colours from its `src/icon.svg`, and the name and tagline from its `composer.json`.
 
-The background mark is randomly scaled, rotated, and positioned on each run, so every banner is unique.
+Every colour comes from the icon — a smooth gradient tinted by the accent colour, the title set in the icon's glyph colour, and a soft accent-tinted shadow under the icon badge — so each banner matches its plugin's brand with no manual colour input. The gradient direction adapts to the glyph colour so the text always sits on a contrasting field.
 
 ```bash title="PHP"
-php craft docs-manager/hero/generate <plugin> [out]
+php craft docs-manager/hero/generate <plugin> [out] [--style=lighter]
 ```
 
 ```bash title="DDEV"
-ddev craft docs-manager/hero/generate <plugin> [out]
+ddev craft docs-manager/hero/generate <plugin> [out] [--style=lighter]
 ```
 
 The output path is optional and defaults to `{plugin}/docs/images/hero.webp`. Add the result to the README as the first line: `![<name>](docs/images/hero.webp)`.
 
 | Argument / Option | Description |
 |-------------------|-------------|
-| `<plugin>` | Plugin handle or folder name. The plugin must be installed/enabled so its icon can be read. |
+| `<plugin>` | Plugin handle or folder name. The icon is read from disk, so the plugin does not need to be installed or enabled. |
 | `[out]` | Output path (default: `{plugin}/docs/images/hero.webp`). |
 | `--name=<name>` | Override the banner title (default: composer `extra.name`). |
 | `--tagline=<text>` | Override the tagline (default: composer `description`, trimmed at the first `" - "`). |
+| `--style=<style>` | Gradient style: `primary`, `lighter` (default), `deeper`, or `diagonal`. |
 
 Example — write to a scratch path without touching the committed asset:
 
@@ -132,7 +133,7 @@ Example — write to a scratch path without touching the committed asset:
 ddev craft docs-manager/hero/generate search-manager /tmp/hero-check.webp
 ```
 
-Generate banners for every installed plugin that has a `docs/` folder and an icon. Existing banners are skipped unless `--force` is given:
+Generate banners for every plugin that has a `docs/` folder and an icon. Existing banners are skipped unless `--force` is given:
 
 ```bash title="PHP"
 php craft docs-manager/hero/generate-all
