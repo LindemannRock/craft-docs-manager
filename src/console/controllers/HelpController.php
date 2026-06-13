@@ -29,7 +29,7 @@ final class HelpController extends AbstractHelpController
                 'php craft',
                 'ddev craft',
             ],
-            'summary' => 'Use these commands to generate plugin docs, migrate READMEs, sync documentation sources, inspect detected versions, test markdown parsing, and install starter frontend templates.',
+            'summary' => 'Use these commands to generate plugin docs, migrate READMEs, generate README hero banners, sync documentation sources, inspect detected versions, test markdown parsing, and install starter frontend templates.',
             'common' => [
                 'sync/plugin',
                 'sync',
@@ -96,6 +96,55 @@ final class HelpController extends AbstractHelpController
                             ],
                             'notes' => [
                                 'The migrate command skips files that already exist.',
+                            ],
+                        ],
+                    ],
+                ],
+                [
+                    'name' => 'hero',
+                    'label' => 'Hero Banners',
+                    'description' => 'Generate README hero banners from plugin icons and metadata.',
+                    'commands' => [
+                        [
+                            'path' => 'hero/generate',
+                            'summary' => 'Generate a README hero banner for a plugin.',
+                            'description' => 'Compose a 1280x360 hero.webp from the plugin icon colour, composer name and tagline, and the LindemannRock background mark. This is an authoring command — it requires the ImageMagick CLI and is never used at runtime.',
+                            'arguments' => '<plugin>',
+                            'usageOptions' => '[out] [--name=<name>] [--tagline=<text>]',
+                            'options' => [
+                                [
+                                    'name' => '--name',
+                                    'description' => 'Override the banner title. Defaults to composer extra.name.',
+                                ],
+                                [
+                                    'name' => '--tagline',
+                                    'description' => 'Override the tagline. Defaults to composer description trimmed at the first " - ".',
+                                ],
+                            ],
+                            'examples' => [
+                                'docs-manager/hero/generate search-manager',
+                                'docs-manager/hero/generate search-manager /tmp/hero-check.webp',
+                            ],
+                            'notes' => [
+                                'Requires the ImageMagick CLI (magick) on PATH.',
+                                'The plugin must be installed/enabled so its icon can be read.',
+                                'Defaults to {plugin}/docs/images/hero.webp when no output path is given.',
+                            ],
+                        ],
+                        [
+                            'path' => 'hero/generate-all',
+                            'summary' => 'Generate hero banners for all plugins with docs.',
+                            'description' => 'Generate banners for every installed plugin that has a docs folder and an icon. Existing banners are skipped unless --force is given.',
+                            'usageOptions' => '[--force]',
+                            'options' => [
+                                [
+                                    'name' => '--force',
+                                    'description' => 'Overwrite banners that already exist.',
+                                ],
+                            ],
+                            'examples' => [
+                                'docs-manager/hero/generate-all',
+                                'docs-manager/hero/generate-all --force',
                             ],
                         ],
                     ],
