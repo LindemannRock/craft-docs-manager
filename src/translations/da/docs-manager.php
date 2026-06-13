@@ -11,14 +11,14 @@
 return [
     // Plugin meta
     'Docs Manager' => 'Docs Manager',
-    'Parse and sync documentation from markdown files to Craft CMS' => 'Analysér og synkronisér dokumentation fra Markdown-filer til Craft CMS',
+    'Parse and sync documentation from markdown files to Craft CMS' => 'Analyser og synkroniser dokumentation fra Markdown-filer til Craft CMS',
 
     // Navigation
     'Dashboard' => 'Oversigt',
     'Sources' => 'Kilder',
     'Pages' => 'Sider',
     'Settings' => 'Indstillinger',
-    'Logs' => 'Logs',
+    'Logs' => 'Logfiler',
 
     // Permissions
     'Manage sources' => 'Administrer kilder',
@@ -87,7 +87,7 @@ return [
     'Could not delete page "{title}".' => 'Kunne ikke slette siden "{title}".',
     'Field layout saved.' => 'Feltlayoutet er gemt.',
     'Couldn\'t save field layout.' => 'Kunne ikke gemme feltlayoutet.',
-    'Settings saved.' => 'Indstillingerne er gemt.',
+    'Settings saved.' => 'Indstillinger gemt.',
     'Could not save settings.' => 'Kunne ikke gemme indstillingerne.',
     'Source saved.' => 'Kilden er gemt.',
     'Could not save source.' => 'Kunne ikke gemme kilden.',
@@ -216,7 +216,7 @@ return [
     'View Custom Pages ({count})' => 'Vis tilpassede sider ({count})',
     'Status' => 'Status',
     'Include this source in sync operations' => 'Inkludér denne kilde i synkroniseringsoperationer',
-    'Resync Source Data' => 'Gensynkronisér kildedata',
+    'Resync Source Data' => 'Gensynkroniser kildedata',
     'Source' => 'Kilde',
     'Are you sure you want to delete this source?' => 'Er du sikker på, at du vil slette denne kilde?',
     'Loading local sources...' => 'Indlæser lokale kilder...',

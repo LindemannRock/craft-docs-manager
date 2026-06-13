@@ -35,7 +35,7 @@ return [
     'Manage settings' => 'Gérer les paramètres',
 
     // Common
-    'All' => 'Tout',
+    'All' => 'Tous',
     'All Sources' => 'Toutes les sources',
     'All Types' => 'Tous les types',
     'Enabled' => 'Activé',

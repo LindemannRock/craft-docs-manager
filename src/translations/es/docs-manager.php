@@ -18,7 +18,7 @@ return [
     'Sources' => 'Orígenes',
     'Pages' => 'Páginas',
     'Settings' => 'Configuración',
-    'Logs' => 'Logs',
+    'Logs' => 'Registros',
 
     // Permissions
     'Manage sources' => 'Gestionar orígenes',
@@ -29,9 +29,9 @@ return [
     'Create pages' => 'Crear páginas',
     'Edit pages' => 'Editar páginas',
     'Delete pages' => 'Eliminar páginas',
-    'View logs' => 'Ver logs',
-    'View system logs' => 'Ver logs del sistema',
-    'Download system logs' => 'Descargar logs del sistema',
+    'View logs' => 'Ver registros',
+    'View system logs' => 'Ver registros del sistema',
+    'Download system logs' => 'Descargar registros del sistema',
     'Manage settings' => 'Gestionar configuración',
 
     // Common

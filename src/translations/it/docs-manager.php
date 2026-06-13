@@ -132,7 +132,7 @@ return [
     'Base path to plugins folder (used for local source type)' => 'Percorso base verso la cartella dei plugin (utilizzato per il tipo di sorgente locale)',
     'GitHub Token' => 'Token GitHub',
     'Personal access token for GitHub API (used for github-api source type, required for private repos and higher rate limits)' => 'Token di accesso personale per l\'API GitHub (utilizzato per il tipo di sorgente github-api, richiesto per i repository privati e limiti di frequenza più elevati)',
-    'Logging Settings' => 'Impostazioni log',
+    'Logging Settings' => 'Impostazioni di log',
 
     // Settings: Frontend
     'Frontend Settings' => 'Impostazioni frontend',
@@ -165,7 +165,7 @@ return [
     'Interface Settings' => 'Impostazioni interfaccia',
     'Interface' => 'Interfaccia',
     'Frontend' => 'Frontend',
-    'Advanced' => 'Avanzato',
+    'Advanced' => 'Avanzate',
     'Page Field Layout' => 'Layout campi pagina',
 
     // Settings: Field Layout

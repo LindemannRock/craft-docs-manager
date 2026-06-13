@@ -18,7 +18,7 @@ return [
     'Sources' => 'Bronnen',
     'Pages' => 'Pagina\'s',
     'Settings' => 'Instellingen',
-    'Logs' => 'Logs',
+    'Logs' => 'Logboeken',
 
     // Permissions
     'Manage sources' => 'Bronnen beheren',

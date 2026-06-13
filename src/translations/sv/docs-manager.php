@@ -87,7 +87,7 @@ return [
     'Could not delete page "{title}".' => 'Det gick inte att ta bort sidan "{title}".',
     'Field layout saved.' => 'Fältlayouten sparades.',
     'Couldn\'t save field layout.' => 'Det gick inte att spara fältlayouten.',
-    'Settings saved.' => 'Inställningarna sparades.',
+    'Settings saved.' => 'Inställningar sparade.',
     'Could not save settings.' => 'Det gick inte att spara inställningarna.',
     'Source saved.' => 'Källan sparades.',
     'Could not save source.' => 'Det gick inte att spara källan.',
@@ -135,7 +135,7 @@ return [
     'Logging Settings' => 'Logginställningar',
 
     // Settings: Frontend
-    'Frontend Settings' => 'Frontendsinställningar',
+    'Frontend Settings' => 'Frontend-inställningar',
     'Parser Settings' => 'Tolkarinställningar',
     'These settings control how documentation is parsed and displayed on the frontend' => 'Dessa inställningar styr hur dokumentationen tolkas och visas på frontend',
     'Enable Syntax Highlighting' => 'Aktivera syntaxmarkering',
