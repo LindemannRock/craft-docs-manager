@@ -11,7 +11,6 @@ namespace lindemannrock\docsmanager\console\controllers;
 use Craft;
 use craft\console\Controller;
 use craft\helpers\Console;
-use lindemannrock\base\Base;
 use lindemannrock\base\helpers\ColorHelper;
 use lindemannrock\base\helpers\PluginHelper;
 use lindemannrock\docsmanager\helpers\HeroImageHelper;
@@ -177,7 +176,7 @@ class HeroController extends Controller
         $name = $nameOverride ?? ($composer['extra']['name'] ?? null) ?? $this->labelFromHandle($handle);
         $tagline = $taglineOverride ?? $this->taglineFromDescription($composer['description'] ?? '');
 
-        $logoPath = $this->resolveBaseLogoPath();
+        $logoPath = PluginHelper::lrLogoFile();
         $out ??= $path . '/docs/images/hero.webp';
 
         try {
@@ -191,17 +190,6 @@ class HeroController extends Controller
         $this->stdout("  name='{$name}' tagline='" . ($tagline ?? '') . "' colour={$color}\n");
 
         return ExitCode::OK;
-    }
-
-    /**
-     * Resolve base's bundled logo via reflection on a base class — never a
-     * hardcoded plugins/base or vendor/ path.
-     */
-    private function resolveBaseLogoPath(): string
-    {
-        $baseDir = dirname((string)(new \ReflectionClass(Base::class))->getFileName());
-
-        return $baseDir . '/icons/lr-logo.svg';
     }
 
     /**

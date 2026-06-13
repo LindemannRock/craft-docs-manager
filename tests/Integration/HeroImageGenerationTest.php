@@ -10,10 +10,9 @@ declare(strict_types=1);
 
 namespace lindemannrock\docsmanager\tests\Integration;
 
-use lindemannrock\base\Base;
+use lindemannrock\base\helpers\PluginHelper;
 use lindemannrock\docsmanager\helpers\HeroImageHelper;
 use lindemannrock\docsmanager\tests\TestCase;
-use ReflectionClass;
 
 /**
  * Pins the success path of {@see HeroImageHelper::generate()}: a valid
@@ -29,9 +28,9 @@ final class HeroImageGenerationTest extends TestCase
             self::markTestSkipped('ImageMagick CLI ("magick") is not available.');
         }
 
-        // LR logo is resolved the same way the command does — reflection on a
-        // base class, never a hardcoded path.
-        $logoPath = dirname((string)(new ReflectionClass(Base::class))->getFileName()) . '/icons/lr-logo.svg';
+        // LR logo is resolved the same way the command does — base owns its
+        // location.
+        $logoPath = PluginHelper::lrLogoFile();
         self::assertFileExists($logoPath);
 
         $out = $this->createTrackedTempDirectory('__docsmanager_test_hero') . '/hero.webp';
