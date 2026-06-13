@@ -46,6 +46,11 @@ class HeroController extends Controller
     public bool $force = false;
 
     /**
+     * @var string|null Gradient style: primary, lighter (default), deeper, or diagonal.
+     */
+    public ?string $style = null;
+
+    /**
      * @inheritdoc
      */
     public function options($actionID): array
@@ -53,6 +58,7 @@ class HeroController extends Controller
         $options = parent::options($actionID);
         $options[] = 'name';
         $options[] = 'tagline';
+        $options[] = 'style';
 
         if ($actionID === 'generate-all') {
             $options[] = 'force';
@@ -64,7 +70,7 @@ class HeroController extends Controller
     /**
      * Generate a hero banner for a single plugin.
      *
-     * Usage: php craft docs-manager/hero/generate <plugin> [out]
+     * Usage: php craft docs-manager/hero/generate <plugin> [out] [--style=lighter]
      *
      * @param string $handle Plugin handle or folder name.
      * @param string|null $out Output path (default: {plugin}/docs/images/hero.webp).
@@ -87,12 +93,12 @@ class HeroController extends Controller
     }
 
     /**
-     * Generate hero banners for every installed plugin that has docs and an icon.
+     * Generate hero banners for every plugin/module on disk that has docs and an icon.
      *
      * Existing heroes are skipped unless --force is given, so this never silently
      * overwrites committed assets.
      *
-     * Usage: php craft docs-manager/hero/generate-all [--force]
+     * Usage: php craft docs-manager/hero/generate-all [--force] [--style=lighter]
      *
      * @return int Exit code
      */
@@ -149,34 +155,51 @@ class HeroController extends Controller
      */
     private function generateFor(string $path, string $handle, ?string $out, ?string $nameOverride, ?string $taglineOverride): int
     {
-        // Icon + accent colour are read straight from the plugin's source directory, so
-        // this works for any plugin or module on disk — installed/enabled or not.
+        // Icon colours are read straight from the plugin's source directory, so this
+        // works for any plugin or module on disk — installed/enabled or not.
         $iconSvg = PluginHelper::readIconSvg($path . '/src');
         if ($iconSvg === null) {
             $this->stderr("Error: \"{$handle}\" has no readable src/icon.svg.\n", Console::FG_RED);
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
-        $color = ColorHelper::primaryHexFromSvg($iconSvg) ?? HeroImageHelper::FALLBACK_COLOR;
+        // accent = the badge fill, ink = the glyph colour (drives text + gradient).
+        $roles = ColorHelper::iconColorRoles($iconSvg);
+        $accent = $roles !== null ? $roles['accent'] : HeroImageHelper::FALLBACK_COLOR;
+        $ink = $roles !== null ? $roles['ink'] : '#FFFFFF';
 
         $composer = $this->readComposer($path);
         $name = $nameOverride ?? ($composer['extra']['name'] ?? null) ?? $this->labelFromHandle($handle);
         $tagline = $taglineOverride ?? $this->taglineFromDescription($composer['description'] ?? '');
 
-        $logoPath = PluginHelper::lrLogoFile();
+        $style = $this->resolveStyle();
         $out ??= $path . '/docs/images/hero.webp';
 
         try {
-            HeroImageHelper::generate($iconSvg, $logoPath, $color, $name, $tagline, $out);
+            HeroImageHelper::generate($accent, $ink, $iconSvg, $name, $tagline, $out, $style);
         } catch (\RuntimeException $e) {
             $this->stderr("Error generating hero for \"{$handle}\": {$e->getMessage()}\n", Console::FG_RED);
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
         $this->stdout("✓ hero → {$out}\n", Console::FG_GREEN);
-        $this->stdout("  name='{$name}' tagline='" . ($tagline ?? '') . "' colour={$color}\n");
+        $this->stdout("  name='{$name}' tagline='" . ($tagline ?? '') . "' accent={$accent} ink={$ink} style={$style}\n");
 
         return ExitCode::OK;
+    }
+
+    /**
+     * Validate the --style option, defaulting (with a warning) to lighter.
+     */
+    private function resolveStyle(): string
+    {
+        $style = $this->style ?? HeroImageHelper::STYLE_LIGHTER;
+        if (!in_array($style, HeroImageHelper::STYLES, true)) {
+            $this->stderr('Warning: unknown style "' . $style . '" — using "' . HeroImageHelper::STYLE_LIGHTER . "\".\n", Console::FG_YELLOW);
+            $style = HeroImageHelper::STYLE_LIGHTER;
+        }
+
+        return $style;
     }
 
     /**
