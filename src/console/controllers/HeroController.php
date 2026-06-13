@@ -8,7 +8,6 @@
 
 namespace lindemannrock\docsmanager\console\controllers;
 
-use Craft;
 use craft\console\Controller;
 use craft\helpers\Console;
 use lindemannrock\base\helpers\ColorHelper;
@@ -108,14 +107,8 @@ class HeroController extends Controller
         $skipped = 0;
         $failed = 0;
 
-        foreach (Craft::$app->getPlugins()->getAllPlugins() as $plugin) {
-            $handle = $plugin->id;
-
-            $resolved = $this->resolvePluginPath($handle);
-            if (!$resolved) {
-                continue;
-            }
-
+        foreach ($this->allPluginPaths() as $resolved) {
+            $handle = $resolved['handle'];
             $path = $resolved['path'];
 
             // Only plugins that ship consumer-facing docs get a hero.
@@ -124,7 +117,7 @@ class HeroController extends Controller
             }
 
             // No icon → nothing to derive a colour/badge from.
-            if (PluginHelper::getIconSvg($plugin) === null) {
+            if (PluginHelper::readIconSvg($path . '/src') === null) {
                 $this->stdout("- {$handle}: skipped (no src/icon.svg)\n", Console::FG_GREY);
                 $skipped++;
                 continue;
@@ -137,7 +130,7 @@ class HeroController extends Controller
                 continue;
             }
 
-            if ($this->generateFor($path, $resolved['handle'], $out, null, null) === ExitCode::OK) {
+            if ($this->generateFor($path, $handle, $out, null, null) === ExitCode::OK) {
                 $generated++;
             } else {
                 $failed++;
@@ -156,17 +149,11 @@ class HeroController extends Controller
      */
     private function generateFor(string $path, string $handle, ?string $out, ?string $nameOverride, ?string $taglineOverride): int
     {
-        // Icon + accent colour come from base's Step-1 helpers, which need the
-        // installed plugin object.
-        $plugin = Craft::$app->getPlugins()->getPlugin($handle);
-        if ($plugin === null) {
-            $this->stderr("Error: plugin \"{$handle}\" is not installed/enabled — its icon cannot be read.\n", Console::FG_RED);
-            return ExitCode::UNSPECIFIED_ERROR;
-        }
-
-        $iconSvg = PluginHelper::getIconSvg($plugin);
+        // Icon + accent colour are read straight from the plugin's source directory, so
+        // this works for any plugin or module on disk — installed/enabled or not.
+        $iconSvg = PluginHelper::readIconSvg($path . '/src');
         if ($iconSvg === null) {
-            $this->stderr("Error: plugin \"{$handle}\" has no readable src/icon.svg.\n", Console::FG_RED);
+            $this->stderr("Error: \"{$handle}\" has no readable src/icon.svg.\n", Console::FG_RED);
             return ExitCode::UNSPECIFIED_ERROR;
         }
 

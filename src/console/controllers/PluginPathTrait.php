@@ -60,6 +60,38 @@ trait PluginPathTrait
     }
 
     /**
+     * List every plugin/module directory under the configured base path
+     * (each directory that contains a composer.json). Resolves from disk, so it
+     * includes Yii modules and packages not installed/enabled in Craft.
+     *
+     * @return array<array{path: string, handle: string}>
+     * @since 5.2.0
+     */
+    protected function allPluginPaths(): array
+    {
+        $settings = DocsManager::getInstance()->getSettings();
+        $basePath = LocalSourcePathHelper::resolve((string) $settings->localPluginBasePath);
+
+        if (!is_dir($basePath)) {
+            return [];
+        }
+
+        $paths = [];
+        foreach (glob($basePath . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+            if (!is_file($dir . '/composer.json')) {
+                continue;
+            }
+
+            $paths[] = [
+                'path' => $dir,
+                'handle' => $this->readHandleFromComposer($dir) ?? basename($dir),
+            ];
+        }
+
+        return $paths;
+    }
+
+    /**
      * Read the plugin handle from composer.json extra.handle
      */
     private function readHandleFromComposer(string $pluginPath): ?string
