@@ -103,6 +103,52 @@ ddev craft docs-manager/docs/migrate --plugin=<plugin>
 
 ---
 
+## Generate Hero Banner @since(5.2.0)
+
+Generates a 1280×360 `hero.webp` banner for a plugin's README, derived automatically from the plugin: the accent colour from its `src/icon.svg`, the name and tagline from its `composer.json`, and the LindemannRock background mark.
+
+The background mark is randomly scaled, rotated, and positioned on each run, so every banner is unique.
+
+```bash title="PHP"
+php craft docs-manager/hero/generate <plugin> [out]
+```
+
+```bash title="DDEV"
+ddev craft docs-manager/hero/generate <plugin> [out]
+```
+
+The output path is optional and defaults to `{plugin}/docs/images/hero.webp`. Add the result to the README as the first line: `![<name>](docs/images/hero.webp)`.
+
+| Argument / Option | Description |
+|-------------------|-------------|
+| `<plugin>` | Plugin handle or folder name. The plugin must be installed/enabled so its icon can be read. |
+| `[out]` | Output path (default: `{plugin}/docs/images/hero.webp`). |
+| `--name=<name>` | Override the banner title (default: composer `extra.name`). |
+| `--tagline=<text>` | Override the tagline (default: composer `description`, trimmed at the first `" - "`). |
+
+Example — write to a scratch path without touching the committed asset:
+
+```bash title="DDEV"
+ddev craft docs-manager/hero/generate search-manager /tmp/hero-check.webp
+```
+
+Generate banners for every installed plugin that has a `docs/` folder and an icon. Existing banners are skipped unless `--force` is given:
+
+```bash title="PHP"
+php craft docs-manager/hero/generate-all
+php craft docs-manager/hero/generate-all --force
+```
+
+```bash title="DDEV"
+ddev craft docs-manager/hero/generate-all
+ddev craft docs-manager/hero/generate-all --force
+```
+
+> [!NOTE]
+> This is a development / authoring command — it requires the **ImageMagick CLI** (`magick`) on `PATH` and is never used at runtime. If `magick` is missing, the command exits with a clear error.
+
+---
+
 ## Sync All Sources @since(5.0.0)
 
 Syncs all enabled sources to the database.
