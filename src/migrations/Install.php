@@ -33,6 +33,9 @@ class Install extends Migration
         // Create doc pages table (element-linked)
         $this->createDocPagesTable();
 
+        // Create source versions table
+        $this->createSourceVersionsTable();
+
         // Create doc pages content table (translatable data)
         $this->createDocPagesContentTable();
 
@@ -58,6 +61,7 @@ class Install extends Migration
         $this->dropTableIfExists('{{%docsmanager_custom_pages}}');
         $this->dropTableIfExists('{{%docsmanager_pages_content}}');
         $this->dropTableIfExists('{{%docsmanager_pages}}');
+        $this->dropTableIfExists('{{%docsmanager_source_versions}}');
         $this->dropTableIfExists('{{%docsmanager_sources}}');
         $this->dropTableIfExists('{{%docsmanager_settings}}');
 
@@ -123,6 +127,7 @@ class Install extends Migration
             'sourceId' => $this->integer()->notNull(),
 
             // Non-translatable page data
+            'version' => $this->string(20)->notNull()->defaultValue(''),
             'category' => $this->string(100)->notNull(), // get-started, features, etc.
             'slug' => $this->string()->notNull(),
             'order' => $this->integer()->notNull()->defaultValue(0),
@@ -152,10 +157,49 @@ class Install extends Migration
 
         // Indexes
         $this->createIndex(null, '{{%docsmanager_pages}}', 'sourceId', false);
+        $this->createIndex(null, '{{%docsmanager_pages}}', 'version', false);
         $this->createIndex(null, '{{%docsmanager_pages}}', 'category', false);
         $this->createIndex(null, '{{%docsmanager_pages}}', 'slug', false);
-        $this->createIndex(null, '{{%docsmanager_pages}}', ['sourceId', 'slug'], true); // Unique per source
-        $this->createIndex(null, '{{%docsmanager_pages}}', ['sourceId', 'category', 'order'], false);
+        $this->createIndex(null, '{{%docsmanager_pages}}', ['sourceId', 'version', 'slug'], true); // Unique per source/version
+        $this->createIndex(null, '{{%docsmanager_pages}}', ['sourceId', 'version', 'category', 'order'], false);
+    }
+
+    /**
+     * Create source versions table
+     */
+    protected function createSourceVersionsTable(): void
+    {
+        $this->createTable('{{%docsmanager_source_versions}}', [
+            'id' => $this->primaryKey(),
+            'dateCreated' => $this->dateTime()->notNull(),
+            'dateUpdated' => $this->dateTime()->notNull(),
+            'uid' => $this->uid(),
+
+            'sourceId' => $this->integer()->notNull(),
+            'label' => $this->string()->notNull(),
+            'slug' => $this->string(20)->null(),
+            'ref' => $this->string()->notNull()->defaultValue('main'),
+            'status' => $this->string(20)->notNull()->defaultValue('stable'),
+            'isDefault' => $this->boolean()->notNull()->defaultValue(false),
+            'sortOrder' => $this->integer()->notNull()->defaultValue(0),
+            'lastSyncedAt' => $this->dateTime()->null(),
+            'lastSyncStatus' => $this->string(20)->null(),
+            'lastSyncError' => $this->text()->null(),
+        ]);
+
+        $this->addForeignKey(
+            null,
+            '{{%docsmanager_source_versions}}',
+            'sourceId',
+            '{{%docsmanager_sources}}',
+            'id',
+            'CASCADE'
+        );
+
+        $this->createIndex(null, '{{%docsmanager_source_versions}}', 'sourceId', false);
+        $this->createIndex(null, '{{%docsmanager_source_versions}}', ['sourceId', 'slug'], true);
+        $this->createIndex(null, '{{%docsmanager_source_versions}}', ['sourceId', 'isDefault'], false);
+        $this->createIndex(null, '{{%docsmanager_source_versions}}', ['sourceId', 'sortOrder'], false);
     }
 
     /**
