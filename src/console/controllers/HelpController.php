@@ -165,7 +165,7 @@ final class HelpController extends AbstractHelpController
                         [
                             'path' => 'sync',
                             'summary' => 'Sync all enabled sources or one source.',
-                            'description' => 'Sync enabled documentation sources into the Docs Manager database. Use --plugin to sync only one source.',
+                            'description' => 'Sync enabled documentation sources into the Docs Manager database. Each source syncs every configured docs version, including pinned refs such as craft-5. Use --plugin to sync only one source.',
                             'usageOptions' => '[--plugin=<plugin>]',
                             'options' => [
                                 [
@@ -177,11 +177,14 @@ final class HelpController extends AbstractHelpController
                                 'docs-manager/sync',
                                 'docs-manager/sync --plugin=search-manager',
                             ],
+                            'notes' => [
+                                'Syncing all sources returns a non-zero exit code if any source or configured docs version fails.',
+                            ],
                         ],
                         [
                             'path' => 'sync/plugin',
                             'summary' => 'Sync one source by handle or folder name.',
-                            'description' => 'Sync a specific source after editing markdown locally. Plugin input accepts either the source DB handle or a local plugin folder name.',
+                            'description' => 'Sync a specific source after editing markdown locally. Plugin input accepts either the source DB handle or a local plugin folder name. All configured docs versions for that source are synced.',
                             'arguments' => '<plugin>',
                             'examples' => [
                                 'docs-manager/sync/plugin search-manager',
@@ -189,12 +192,13 @@ final class HelpController extends AbstractHelpController
                             ],
                             'notes' => [
                                 'If no source is registered yet, a local source is created automatically on first sync when the handle resolves to a plugin/module directory (with a composer.json) under the configured Local Plugin Base Path. GitHub sources must be added in the CP.',
+                                'Local pinned docs versions are read from the configured Git ref with git show; GitHub pinned versions are read with the GitHub API ref parameter.',
                             ],
                         ],
                         [
                             'path' => 'sync/version',
                             'summary' => 'Check detected version metadata for a source.',
-                            'description' => 'Show the detected version and which source won, such as GitHub API, Packagist, git tags, or composer.json.',
+                            'description' => 'Show the detected package/source version and which detection method won, such as GitHub API, Packagist, git tags, or composer.json. This does not list configured docs-version rows.',
                             'arguments' => '<plugin>',
                             'examples' => [
                                 'docs-manager/sync/version search-manager',

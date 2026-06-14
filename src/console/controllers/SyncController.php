@@ -54,9 +54,18 @@ class SyncController extends Controller
         $this->stdout("Syncing all plugins...\n\n", Console::FG_YELLOW);
 
         $results = DocsManager::getInstance()->sync->syncAllPlugins();
+        $hasErrors = false;
 
         foreach ($results as $handle => $result) {
             $this->displayResult($handle, $result);
+            if (!$result['success']) {
+                $hasErrors = true;
+            }
+        }
+
+        if ($hasErrors) {
+            $this->stderr("\nSync completed with errors.\n", Console::FG_RED);
+            return ExitCode::UNSPECIFIED_ERROR;
         }
 
         $this->stdout("\nSync complete!\n", Console::FG_GREEN);
@@ -180,6 +189,17 @@ class SyncController extends Controller
             $this->stdout("  Pages synced: {$result['pages']}\n");
             if ($result['version']) {
                 $this->stdout("  Version: {$result['version']}\n");
+            }
+            if (!empty($result['versions']) && is_array($result['versions'])) {
+                foreach ($result['versions'] as $versionResult) {
+                    if (!is_array($versionResult)) {
+                        continue;
+                    }
+                    $label = $versionResult['label'] ?? 'Unknown';
+                    $ref = $versionResult['ref'] ?? 'unknown';
+                    $pages = $versionResult['pages'] ?? 0;
+                    $this->stdout("  - {$label} ({$ref}): {$pages} pages\n");
+                }
             }
         } else {
             $this->stderr("✗ {$handle}\n", Console::FG_RED);

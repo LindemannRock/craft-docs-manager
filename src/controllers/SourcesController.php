@@ -16,6 +16,7 @@ use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
+use lindemannrock\docsmanager\records\SourceVersionRecord;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
@@ -213,7 +214,7 @@ class SourcesController extends Controller
     /**
      * Edit/create source
      */
-    public function actionEdit(?int $sourceId = null, ?SourceRecord $source = null, ?bool $isNew = null): Response
+    public function actionEdit(?int $sourceId = null, ?SourceRecord $source = null, ?array $sourceVersions = null, ?array $versionStatusOptions = null, ?bool $isNew = null): Response
     {
         if ($sourceId) {
             $this->requirePermission('docsManager:editSources');
@@ -232,6 +233,8 @@ class SourcesController extends Controller
 
         return $this->renderTemplate('docs-manager/sources/edit', [
             'source' => $source,
+            'sourceVersions' => $sourceVersions ?? $this->getSourceVersions($source),
+            'versionStatusOptions' => $versionStatusOptions ?? SourceVersionRecord::statusOptions(),
             'isNew' => $isNew ?? !$sourceId,
         ]);
     }
@@ -282,6 +285,24 @@ class SourcesController extends Controller
             ]);
 
             return null;
+        }
+
+        if ($isNewSource) {
+            $this->ensureDefaultVersion($source);
+        } else {
+            $versions = Craft::$app->getRequest()->getBodyParam('versions', []);
+            if (!$this->saveSourceVersions($source, is_array($versions) ? $versions : [])) {
+                $this->setFailFlash(Craft::t('docs-manager', 'Could not save source versions.'));
+
+                Craft::$app->getUrlManager()->setRouteParams([
+                    'source' => $source,
+                    'sourceVersions' => $this->getSourceVersions($source),
+                    'versionStatusOptions' => SourceVersionRecord::statusOptions(),
+                    'isNew' => false,
+                ]);
+
+                return null;
+            }
         }
 
         // Queue initial sync for new sources
@@ -624,6 +645,7 @@ class SourcesController extends Controller
         }
 
         if ($source->save()) {
+            $this->ensureDefaultVersion($source);
             Craft::$app->getSession()->setNotice(Craft::t('docs-manager', 'Source added: {name}', ['name' => $source->name]));
             return $this->asJson(['success' => true]);
         }
@@ -674,5 +696,97 @@ class SourcesController extends Controller
         $count = SourceRecord::deleteAll(['id' => $sourceIds]);
 
         return $this->asJson(['success' => true, 'count' => $count]);
+    }
+
+    /**
+     * @return SourceVersionRecord[]
+     */
+    private function getSourceVersions(SourceRecord $source): array
+    {
+        if (!$source->id) {
+            return [];
+        }
+
+        /** @var SourceVersionRecord[] $versions */
+        $versions = SourceVersionRecord::find()
+            ->where(['sourceId' => $source->id])
+            ->orderBy(['sortOrder' => SORT_ASC, 'id' => SORT_ASC])
+            ->all();
+
+        if ($versions === []) {
+            return [$this->ensureDefaultVersion($source)];
+        }
+
+        return $versions;
+    }
+
+    private function ensureDefaultVersion(SourceRecord $source): SourceVersionRecord
+    {
+        $version = SourceVersionRecord::findOne(['sourceId' => $source->id, 'isDefault' => true]);
+        if ($version) {
+            return $version;
+        }
+
+        $version = new SourceVersionRecord();
+        $version->sourceId = $source->id;
+        $version->label = $source->currentVersion ? preg_replace('/^(\d+).*/', '$1.x', $source->currentVersion) : 'Current';
+        $version->slug = null;
+        $version->ref = 'main';
+        $version->status = SourceVersionRecord::STATUS_LATEST;
+        $version->isDefault = true;
+        $version->sortOrder = 0;
+        $version->save(false);
+
+        return $version;
+    }
+
+    /**
+     * @param array<int|string, mixed> $rows
+     */
+    private function saveSourceVersions(SourceRecord $source, array $rows): bool
+    {
+        $seenIds = [];
+        $hadError = false;
+
+        foreach ($rows as $index => $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $id = (int) ($row['id'] ?? 0);
+            $delete = !empty($row['delete']);
+            $version = $id ? SourceVersionRecord::findOne(['id' => $id, 'sourceId' => $source->id]) : new SourceVersionRecord();
+
+            if (!$version) {
+                continue;
+            }
+
+            if ($delete) {
+                if (!$version->isDefault) {
+                    $version->delete();
+                }
+                continue;
+            }
+
+            $version->sourceId = $source->id;
+            $version->label = (string) ($row['label'] ?? '');
+            $version->slug = (string) ($row['slug'] ?? '') ?: null;
+            $version->ref = (string) ($row['ref'] ?? 'main');
+            $version->status = (string) ($row['status'] ?? SourceVersionRecord::STATUS_STABLE);
+            $version->isDefault = !empty($row['isDefault']);
+            $version->sortOrder = (int) ($row['sortOrder'] ?? $index);
+
+            if (!$version->save()) {
+                $hadError = true;
+            } elseif ($version->id) {
+                $seenIds[] = (int) $version->id;
+            }
+        }
+
+        if (SourceVersionRecord::find()->where(['sourceId' => $source->id, 'isDefault' => true])->count() === 0) {
+            $this->ensureDefaultVersion($source);
+        }
+
+        return !$hadError && $seenIds !== [];
     }
 }
