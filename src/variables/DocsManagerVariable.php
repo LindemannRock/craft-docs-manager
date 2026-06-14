@@ -171,6 +171,39 @@ class DocsManagerVariable
     }
 
     /**
+     * Get a source's mask icon SVG for theme-coloured UI surfaces.
+     *
+     * Synced sources store this in metadata. Local sources can fall back to
+     * `src/icon-mask.svg` until their next sync writes the metadata value.
+     *
+     * @since 5.2.0
+     */
+    public function getIconMaskSvg(string $handle): ?string
+    {
+        $source = $this->getSource($handle);
+        if (!$source) {
+            return null;
+        }
+
+        $metadata = $source['metadata'] ?? null;
+        if (is_string($metadata) && $metadata !== '') {
+            $decoded = json_decode($metadata, true);
+            if (is_array($decoded) && is_string($decoded['iconMaskSvg'] ?? null) && $decoded['iconMaskSvg'] !== '') {
+                return $decoded['iconMaskSvg'];
+            }
+        } elseif (is_array($metadata) && is_string($metadata['iconMaskSvg'] ?? null) && $metadata['iconMaskSvg'] !== '') {
+            return $metadata['iconMaskSvg'];
+        }
+
+        $basePath = !empty($source['localPath'])
+            ? LocalSourcePathHelper::resolve((string) $source['localPath'])
+            : LocalSourcePathHelper::join('@root/plugins', $handle);
+        $maskPath = $basePath . '/src/icon-mask.svg';
+
+        return is_file($maskPath) ? file_get_contents($maskPath) ?: null : null;
+    }
+
+    /**
      * Get theme source by handle
      *
      * Usage: {% set theme = craft.docsManager.getTheme('medical') %}

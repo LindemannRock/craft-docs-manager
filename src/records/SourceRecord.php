@@ -30,7 +30,7 @@ use lindemannrock\base\helpers\SlugHandleHelper;
  * @property bool $enabled
  * @property string|null $lastSyncedAt
  * @property string|null $changelogContent
- * @property array|null $metadata
+ * @property string|null $metadata
  * @property \DateTime $dateCreated
  * @property \DateTime $dateUpdated
  * @property string $uid

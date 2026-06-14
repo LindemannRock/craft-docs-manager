@@ -248,6 +248,18 @@ class SyncService extends Component
         } catch (\Exception) {
             $plugin->iconSvg = null;
         }
+
+        try {
+            if ($plugin->sourceType === 'github-api') {
+                $iconMaskContent = $this->fetchGithubFile($plugin, 'src/icon-mask.svg', $version->ref);
+            } else {
+                $iconMaskPath = $pluginPath . '/src/icon-mask.svg';
+                $iconMaskContent = file_exists($iconMaskPath) ? file_get_contents($iconMaskPath) : null;
+            }
+            $this->setSourceMetadataValue($plugin, 'iconMaskSvg', is_string($iconMaskContent) ? $iconMaskContent : null);
+        } catch (\Exception) {
+            $this->setSourceMetadataValue($plugin, 'iconMaskSvg', null);
+        }
     }
 
     /**
@@ -717,5 +729,23 @@ class SyncService extends Component
     protected function pageVersionValue(SourceVersionRecord $version): string
     {
         return $version->slug ?? '';
+    }
+
+    private function setSourceMetadataValue(SourceRecord $source, string $key, mixed $value): void
+    {
+        $metadata = [];
+        if ($source->metadata !== null && $source->metadata !== '') {
+            $decoded = json_decode($source->metadata, true);
+            $metadata = is_array($decoded) ? $decoded : [];
+        }
+
+        if ($value === null || $value === '') {
+            unset($metadata[$key]);
+        } else {
+            $metadata[$key] = $value;
+        }
+
+        $encoded = $metadata === [] ? null : json_encode($metadata, JSON_UNESCAPED_SLASHES);
+        $source->metadata = is_string($encoded) ? $encoded : null;
     }
 }
