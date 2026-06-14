@@ -46,6 +46,12 @@ class SourceDoc extends Element
     public ?string $slug = null;
 
     /**
+     * @var string Version slug. Empty string means the default/latest docs URL.
+     * @since 5.2.0
+     */
+    public string $version = '';
+
+    /**
      * @var string|null Category key (e.g., "get-started")
      */
     public ?string $category = null;
@@ -233,7 +239,9 @@ class SourceDoc extends Element
             return null;
         }
 
-        return '/plugins/' . $handle . '/docs/' . $this->slug;
+        $versionSegment = $this->version !== '' ? $this->version . '/' : '';
+
+        return '/plugins/' . $handle . '/docs/' . $versionSegment . $this->slug;
     }
 
     /**
@@ -326,6 +334,7 @@ class SourceDoc extends Element
         if ($this->slug !== null) {
             $this->slug = SlugHandleHelper::normalizePathSlug($this->slug, '');
         }
+        $this->version = SlugHandleHelper::normalizePathSlug($this->version, '');
         if ($this->category !== null) {
             $this->category = SlugHandleHelper::normalizeSlug($this->category, '');
         }
@@ -378,6 +387,7 @@ class SourceDoc extends Element
             }
 
             $record->sourceId = $this->sourceId;
+            $record->version = $this->version;
             $record->category = $this->category;
             $record->slug = $this->slug;
             $record->order = $this->order;

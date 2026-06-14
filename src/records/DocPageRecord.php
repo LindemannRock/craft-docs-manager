@@ -20,6 +20,7 @@ use yii\db\ActiveQueryInterface;
  *
  * @property int $id FK to elements.id
  * @property int $sourceId
+ * @property string $version
  * @property string $category
  * @property string $slug
  * @property int $order

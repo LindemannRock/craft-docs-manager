@@ -41,6 +41,12 @@ class SourceDocQuery extends ElementQuery
     public mixed $category = null;
 
     /**
+     * @var string|string[]|null The version slug(s) that the resulting docs must belong to. Empty string is default/latest.
+     * @since 5.2.0
+     */
+    public mixed $version = null;
+
+    /**
      * @var string|string[]|null The slug(s) that the resulting docs must have.
      */
     public mixed $slug = null;
@@ -90,6 +96,19 @@ class SourceDocQuery extends ElementQuery
     }
 
     /**
+     * Sets the [[version]] property.
+     *
+     * @param string|string[]|null $value
+     * @return static
+     * @since 5.2.0
+     */
+    public function version(mixed $value): static
+    {
+        $this->version = $value;
+        return $this;
+    }
+
+    /**
      * Sets the [[slug]] property.
      *
      * @param string|string[]|null $value
@@ -130,6 +149,7 @@ class SourceDocQuery extends ElementQuery
 
         $this->query->select([
             'docsmanager_pages.sourceId',
+            'docsmanager_pages.version',
             'docsmanager_pages.category',
             'docsmanager_pages.slug',
             'docsmanager_pages.order',
@@ -156,6 +176,10 @@ class SourceDocQuery extends ElementQuery
 
         if ($this->category) {
             $this->subQuery->andWhere(Db::parseParam('docsmanager_pages.category', $this->category));
+        }
+
+        if ($this->version !== null) {
+            $this->subQuery->andWhere(Db::parseParam('docsmanager_pages.version', $this->version));
         }
 
         if ($this->slug) {
