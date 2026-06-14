@@ -30,6 +30,9 @@ Each source can sync from one of two source types:
 6. Select a source — name, handle, and description auto-populate
 7. Click **Save** — sync runs automatically
 
+> [!NOTE]
+> For **local** sources you can skip these steps entirely: run `php craft docs-manager/sync/plugin <handle>` (or `ddev craft …`) and the source is created automatically on first sync, as long as the handle matches a plugin/module folder containing a `composer.json` under your **Local Plugin Base Path**. GitHub sources must be added here in the CP. @since(5.2.0)
+
 ## Documentation Structure
 
 Each source's docs live in a `/docs/` folder:

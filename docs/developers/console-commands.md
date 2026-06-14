@@ -200,6 +200,8 @@ php craft docs-manager/sync/plugin search-manager
 ddev craft docs-manager/sync/plugin search-manager
 ```
 
+If the source isn't registered yet, a **local** source is created automatically the first time you sync it @since(5.2.0) — as long as `<plugin>` resolves to a real plugin/module directory (one containing a `composer.json`) under the configured **Local Plugin Base Path**. So a local plugin goes from zero to synced in a single command, with no manual onboarding. GitHub sources must still be added in the CP, since a repository URL can't be derived from a handle.
+
 ---
 
 ## Check Version @since(5.0.0)
