@@ -9,6 +9,30 @@
 {% set fullPageForm = true %}
 {% set saveShortcutRedirect = cpUrl('docs-manager/sources/{id}') %}
 {% set retainScrollOnSaveShortcut = true %}
+{% set tabs = {
+    fields: {
+        label: 'Source'|t('docs-manager'),
+        url: '#fields',
+    },
+} %}
+
+{% if source.id %}
+    {% set tabs = tabs|merge({
+        docsVersions: {
+            label: 'Docs Versions'|t('docs-manager'),
+            url: '#docs-versions',
+        },
+    }) %}
+
+    {% if currentUser.can('docsManager:managePages') %}
+        {% set tabs = tabs|merge({
+            customPages: {
+                label: 'Custom Pages'|t('docs-manager'),
+                url: '#custom-pages',
+            },
+        }) %}
+    {% endif %}
+{% endif %}
 
 {# Site crumb for multi-site #}
 {% set crumbs = [] %}
@@ -99,187 +123,117 @@
         <input type="hidden" name="sourceId" value="{{ source.id }}">
     {% endif %}
 
-    {# Kind Selection #}
-    {{ forms.selectField({
-        first: true,
-        label: 'Kind'|t('docs-manager'),
-        instructions: 'What type of documentation source is this?'|t('docs-manager'),
-        id: 'kind',
-        name: 'source[kind]',
-        value: source.kind ?? 'plugin',
-        options: [
-            { label: 'Plugin'|t('docs-manager'), value: 'plugin' },
-            { label: 'Theme'|t('docs-manager'), value: 'theme' },
-        ],
-        errors: source.getErrors('kind'),
-    }) }}
+    <div id="fields">
+        {# Kind Selection #}
+        {{ forms.selectField({
+            first: true,
+            label: 'Kind'|t('docs-manager'),
+            instructions: 'What type of documentation source is this?'|t('docs-manager'),
+            id: 'kind',
+            name: 'source[kind]',
+            value: source.kind ?? 'plugin',
+            options: [
+                { label: 'Plugin'|t('docs-manager'), value: 'plugin' },
+                { label: 'Theme'|t('docs-manager'), value: 'theme' },
+            ],
+            errors: source.getErrors('kind'),
+        }) }}
 
-    {# Source Type Selection #}
-    {% set hasGithubToken = pluginInstance.settings.githubToken %}
-    {% set sourceOptions = [{ label: 'Local File System', value: 'local' }] %}
-    {% if hasGithubToken %}
-        {% set sourceOptions = sourceOptions|merge([{ label: 'GitHub API', value: 'github-api' }]) %}
-    {% endif %}
-    {% set sourceTypeErrors = source.getErrors('sourceType')|merge(source.getErrors('repositoryUrl'))|merge(source.getErrors('localPath')) %}
+        {# Source Type Selection #}
+        {% set hasGithubToken = pluginInstance.settings.githubToken %}
+        {% set sourceOptions = [{ label: 'Local File System', value: 'local' }] %}
+        {% if hasGithubToken %}
+            {% set sourceOptions = sourceOptions|merge([{ label: 'GitHub API', value: 'github-api' }]) %}
+        {% endif %}
+        {% set sourceTypeErrors = source.getErrors('sourceType')|merge(source.getErrors('repositoryUrl'))|merge(source.getErrors('localPath')) %}
 
-    {{ forms.selectField({
-        label: 'Source Type'|t('docs-manager'),
-        instructions: 'Where to read documentation for this source'|t('docs-manager'),
-        id: 'sourceType',
-        name: 'source[sourceType]',
-        value: source.sourceType ?? pluginInstance.settings.defaultSourceType,
-        options: sourceOptions,
-        disabled: not isNew,
-        errors: sourceTypeErrors,
-    }) }}
+        {{ forms.selectField({
+            label: 'Source Type'|t('docs-manager'),
+            instructions: 'Where to read documentation for this source'|t('docs-manager'),
+            id: 'sourceType',
+            name: 'source[sourceType]',
+            value: source.sourceType ?? pluginInstance.settings.defaultSourceType,
+            options: sourceOptions,
+            disabled: not isNew,
+            errors: sourceTypeErrors,
+        }) }}
 
-    {# Quick Add - Auto-loads available sources #}
-    {% if isNew %}
-        <div class="field" id="quick-add-field">
-            <div class="heading">
-                <label>{{ "Quick Add"|t('docs-manager') }}</label>
+        {# Quick Add - Auto-loads available sources #}
+        {% if isNew %}
+            <div class="field" id="quick-add-field">
+                <div class="heading">
+                    <label>{{ "Quick Add"|t('docs-manager') }}</label>
+                </div>
+                <div class="input">
+                    <div id="source-selector-container"></div>
+                </div>
             </div>
-            <div class="input">
-                <div id="source-selector-container"></div>
-            </div>
-        </div>
-    {% endif %}
+        {% endif %}
 
-    <hr>
+        <hr>
 
-    <h2>{{ "Source Information"|t('docs-manager') }}</h2>
-    <p class="light">{{ "This information is automatically synced from the source (docs/index.json or composer.json)"|t('docs-manager') }}</p>
+        <h2>{{ "Source Information"|t('docs-manager') }}</h2>
+        <p class="light">{{ "This information is automatically synced from the source (docs/index.json or composer.json)"|t('docs-manager') }}</p>
 
-    {{ forms.textField({
-        label: 'Name'|t('docs-manager'),
-        instructions: 'The display name of this source'|t('docs-manager'),
-        id: 'name',
-        name: 'source[name]',
-        value: source.name ?? '',
-        required: true,
-        readonly: not isNew and not source.hasErrors(),
-        errors: source.getErrors('name'),
-    }) }}
+        {{ forms.textField({
+            label: 'Name'|t('docs-manager'),
+            instructions: 'The display name of this source'|t('docs-manager'),
+            id: 'name',
+            name: 'source[name]',
+            value: source.name ?? '',
+            required: true,
+            readonly: not isNew and not source.hasErrors(),
+            errors: source.getErrors('name'),
+        }) }}
 
-    {{ forms.textField({
-        label: 'Handle'|t('docs-manager'),
-        instructions: 'Unique handle for this source (auto-populated from Quick Add)'|t('docs-manager'),
-        id: 'handle',
-        name: 'source[handle]',
-        value: source.handle ?? '',
-        required: true,
-        readonly: not isNew and not source.hasErrors(),
-        errors: source.getErrors('handle'),
-    }) }}
+        {{ forms.textField({
+            label: 'Handle'|t('docs-manager'),
+            instructions: 'Unique handle for this source (auto-populated from Quick Add)'|t('docs-manager'),
+            id: 'handle',
+            name: 'source[handle]',
+            value: source.handle ?? '',
+            required: true,
+            readonly: not isNew and not source.hasErrors(),
+            errors: source.getErrors('handle'),
+        }) }}
 
-    {{ forms.textareaField({
-        label: 'Description'|t('docs-manager'),
-        instructions: 'A short description of this source'|t('docs-manager'),
-        id: 'description',
-        name: 'source[description]',
-        value: source.description ?? '',
-        rows: 2,
-        errors: source.getErrors('description'),
-    }) }}
+        {{ forms.textareaField({
+            label: 'Description'|t('docs-manager'),
+            instructions: 'A short description of this source'|t('docs-manager'),
+            id: 'description',
+            name: 'source[description]',
+            value: source.description ?? '',
+            rows: 2,
+            errors: source.getErrors('description'),
+        }) }}
 
-    {# Hidden fields - auto-populated from selector #}
-    <input type="hidden" id="repositoryUrl" name="source[repositoryUrl]" value="{{ source.repositoryUrl ?? '' }}">
-    <input type="hidden" id="localPath" name="source[localPath]" value="{{ source.localPath ?? '' }}">
+        {# Hidden fields - auto-populated from selector #}
+        <input type="hidden" id="repositoryUrl" name="source[repositoryUrl]" value="{{ source.repositoryUrl ?? '' }}">
+        <input type="hidden" id="localPath" name="source[localPath]" value="{{ source.localPath ?? '' }}">
+
+        {% include 'lindemannrock-base/_components/plugin-credit' %}
+    </div>
 
     {% if source.id %}
-        <hr>
-        <h2>{{ "Docs Versions"|t('docs-manager') }}</h2>
-        <p class="light">{{ "Add pinned documentation versions that sync from non-main Git refs. The main ref is always the default docs URL."|t('docs-manager') }}</p>
-
-        <div class="tableview">
-            <table class="data fullwidth" id="docs-versions-table">
-                <thead>
-                    <tr>
-                        <th>{{ "Label"|t('docs-manager') }}</th>
-                        <th>{{ "URL Slug"|t('docs-manager') }}</th>
-                        <th>{{ "Git Ref"|t('docs-manager') }}</th>
-                        <th>{{ "Status"|t('docs-manager') }}</th>
-                        <th>{{ "Last Synced"|t('docs-manager') }}</th>
-                        <th>{{ "Delete"|t('docs-manager') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for version in sourceVersions %}
-                        {% set rowName = 'versions[' ~ loop.index0 ~ ']' %}
-                        <tr>
-                            <td>
-                                <input type="hidden" name="{{ rowName }}[id]" value="{{ version.id }}">
-                                <input type="hidden" name="{{ rowName }}[isDefault]" value="{{ version.isDefault ? '1' : '0' }}">
-                                <input class="text fullwidth" type="text" name="{{ rowName }}[label]" value="{{ version.label }}" {{ version.isDefault ? 'readonly' : '' }}>
-                                {% if version.hasErrors('label') %}<ul class="errors"><li>{{ version.getFirstError('label') }}</li></ul>{% endif %}
-                            </td>
-                            <td>
-                                <input class="text fullwidth" type="text" name="{{ rowName }}[slug]" value="{{ version.slug }}" placeholder="{{ version.isDefault ? 'default' : 'v5' }}" {{ version.isDefault ? 'readonly' : '' }}>
-                                {% if version.hasErrors('slug') %}<ul class="errors"><li>{{ version.getFirstError('slug') }}</li></ul>{% endif %}
-                            </td>
-                            <td>
-                                <input class="text fullwidth" type="text" name="{{ rowName }}[ref]" value="{{ version.ref }}" {{ version.isDefault ? 'readonly' : '' }}>
-                                {% if version.hasErrors('ref') %}<ul class="errors"><li>{{ version.getFirstError('ref') }}</li></ul>{% endif %}
-                            </td>
-                            <td>
-                                {% if version.isDefault %}
-                                    <input type="hidden" name="{{ rowName }}[status]" value="latest">
-                                    <span class="status green"></span>{{ "Latest"|t('docs-manager') }}
-                                {% else %}
-                                    <div class="select">
-                                        <select name="{{ rowName }}[status]">
-                                            {% for statusValue, statusLabel in versionStatusOptions %}
-                                                <option value="{{ statusValue }}" {{ version.status == statusValue ? 'selected' : '' }}>{{ statusLabel }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    {% if version.hasErrors('status') %}<ul class="errors"><li>{{ version.getFirstError('status') }}</li></ul>{% endif %}
-                                {% endif %}
-                                <input type="hidden" name="{{ rowName }}[sortOrder]" value="{{ loop.index0 }}">
-                            </td>
-                            <td>
-                                {% if version.lastSyncedAt %}
-                                    {{ version.lastSyncedAt|lrDatetime }}
-                                {% else %}
-                                    <span class="light">{{ "Never"|t('docs-manager') }}</span>
-                                {% endif %}
-                                {% if version.lastSyncStatus == 'error' and version.lastSyncError %}
-                                    <div class="error" style="margin-top: 4px;">{{ version.lastSyncError|nl2br }}</div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if version.isDefault %}
-                                    <span class="light">-</span>
-                                {% else %}
-                                    <label>
-                                        <input type="checkbox" name="{{ rowName }}[delete]" value="1">
-                                    </label>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div style="margin-top: 12px;">
-            <button type="button" class="btn" id="add-docs-version-btn">{{ "Add version"|t('docs-manager') }}</button>
+        <div id="docs-versions" class="hidden">
+            {% include 'docs-manager/sources/_partials/docs-versions' with {
+                sourceVersions: sourceVersions,
+                sourceVersionCandidates: sourceVersionCandidates,
+            } only %}
         </div>
     {% endif %}
 
-    {# Custom Pages link (only for existing sources) #}
     {% if source.id and currentUser.can('docsManager:managePages') %}
-        <hr>
-        <h2>{{ "Custom Pages"|t('docs-manager') }}</h2>
-        {% set customPages = craft.docsManager.getCustomPages(source.handle) %}
-        <div style="margin-top: 12px;">
-            <a href="{{ url('docs-manager/pages', { sourceId: source.id }) }}" class="btn">
-                {{ "View Custom Pages ({count})"|t('docs-manager', { count: customPages|length }) }}
-            </a>
+        <div id="custom-pages" class="hidden">
+            <div class="pane">
+                <h2 style="margin-top: 0;">{{ "Custom Pages"|t('docs-manager') }}</h2>
+                {% set customPages = craft.docsManager.getCustomPages(source.handle) %}
+                <a href="{{ url('docs-manager/pages', { sourceId: source.id }) }}" class="btn">
+                    {{ "View Custom Pages ({count})"|t('docs-manager', { count: customPages|length }) }}
+                </a>
+            </div>
         </div>
     {% endif %}
-
-    {% include 'lindemannrock-base/_components/plugin-credit' %}
 {% endblock %}
 
 {% block details %}
@@ -414,35 +368,213 @@
 
     {% if source.id %}
         let docsVersionIndex = {{ sourceVersions|length }};
-        const docsVersionsTable = document.querySelector('#docs-versions-table tbody');
+        const docsVersionsList = document.getElementById('docs-versions-list');
+        const docsVersionCandidateSelect = document.getElementById('docs-version-candidate-select');
         const addDocsVersionBtn = document.getElementById('add-docs-version-btn');
-        if (docsVersionsTable && addDocsVersionBtn) {
+        const emptyCandidatesMessage = document.getElementById('docs-version-empty-candidates');
+        const docsVersionDeleteConfirmTemplate = {{ 'Remove docs version "{name}" from this source?'|t('docs-manager')|json_encode|raw }};
+
+        function escapeDocsVersionValue(value) {
+            return String(value).replace(/[&<>"']/g, function(character) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;',
+                }[character];
+            });
+        }
+
+        function refreshDocsVersionCandidateState() {
+            if (!docsVersionCandidateSelect || !addDocsVersionBtn) {
+                return;
+            }
+
+            const hasCandidates = docsVersionCandidateSelect.options.length > 0;
+            addDocsVersionBtn.disabled = !hasCandidates;
+            docsVersionCandidateSelect.disabled = !hasCandidates;
+            emptyCandidatesMessage?.classList.toggle('hidden', hasCandidates);
+        }
+
+        function docsVersionMajor(value) {
+            const match = String(value || '').match(/\d+/);
+
+            return match ? Number.parseInt(match[0], 10) : 0;
+        }
+
+        function docsVersionPhaseRank(value) {
+            value = String(value || '').toLowerCase();
+
+            if (value.includes('beta')) {
+                return 1;
+            }
+
+            if (value.includes('alpha')) {
+                return 2;
+            }
+
+            return 0;
+        }
+
+        function docsVersionSortKey(row) {
+            const isDefault = row.querySelector('input[name$="[isDefault]"]')?.value === '1';
+            const slug = row.querySelector('input[name$="[slug]"]')?.value || '';
+            const label = row.querySelector('input[name$="[label]"]')?.value || '';
+            const value = slug || label;
+
+            return {
+                isDefault: isDefault ? 1 : 0,
+                major: docsVersionMajor(value),
+                phase: docsVersionPhaseRank(value),
+            };
+        }
+
+        function compareDocsVersionRows(a, b) {
+            const aKey = docsVersionSortKey(a);
+            const bKey = docsVersionSortKey(b);
+
+            if (aKey.isDefault !== bKey.isDefault) {
+                return bKey.isDefault - aKey.isDefault;
+            }
+
+            if (aKey.major !== bKey.major) {
+                return bKey.major - aKey.major;
+            }
+
+            return aKey.phase - bKey.phase;
+        }
+
+        function sortDocsVersionRows() {
+            if (!docsVersionsList) {
+                return;
+            }
+
+            const pairs = Array.from(docsVersionsList.querySelectorAll('[data-docs-version-row]')).map(row => ({
+                row: row,
+                metaRow: row.nextElementSibling?.matches('[data-docs-version-meta-row]') ? row.nextElementSibling : null,
+            }));
+
+            pairs.sort((a, b) => compareDocsVersionRows(a.row, b.row));
+
+            pairs.forEach((pair, index) => {
+                const sortInput = pair.row.querySelector('[data-sort-order-input]');
+                if (sortInput) {
+                    sortInput.value = String(index);
+                }
+
+                docsVersionsList.appendChild(pair.row);
+
+                if (pair.metaRow) {
+                    docsVersionsList.appendChild(pair.metaRow);
+                }
+            });
+        }
+
+        docsVersionsList?.addEventListener('click', function(event) {
+            const retiredSwitch = event.target.closest('[data-docs-version-retired-switch]');
+            if (retiredSwitch) {
+                event.preventDefault();
+                const isOn = !retiredSwitch.classList.contains('on');
+                const input = retiredSwitch.querySelector('input[type="hidden"]');
+
+                retiredSwitch.classList.toggle('on', isOn);
+                retiredSwitch.setAttribute('aria-checked', isOn ? 'true' : 'false');
+                if (input) {
+                    input.value = isOn ? '1' : '';
+                }
+                return;
+            }
+
+            const deleteButton = event.target.closest('[data-delete-docs-version]');
+            if (!deleteButton) {
+                return;
+            }
+
+            const row = deleteButton.closest('[data-docs-version-row]');
+            const deleteInput = row?.querySelector('[data-delete-input]');
+            const idInput = row?.querySelector('input[name$="[id]"]');
+
+            if (!row || !deleteInput) {
+                return;
+            }
+
+            const label = row.querySelector('input[name$="[label]"]')?.value || '';
+            if (!confirm(docsVersionDeleteConfirmTemplate.replace('{name}', label))) {
+                return;
+            }
+
+            if (idInput && idInput.value) {
+                deleteInput.value = '1';
+                row.classList.add('hidden');
+                row.nextElementSibling?.matches('[data-docs-version-meta-row]') && row.nextElementSibling.classList.add('hidden');
+            } else {
+                row.nextElementSibling?.matches('[data-docs-version-meta-row]') && row.nextElementSibling.remove();
+                row.remove();
+            }
+
+            sortDocsVersionRows();
+        });
+
+        if (docsVersionsList && docsVersionCandidateSelect && addDocsVersionBtn) {
             addDocsVersionBtn.addEventListener('click', function() {
+                const selectedOption = docsVersionCandidateSelect.selectedOptions[0];
+                if (!selectedOption) {
+                    return;
+                }
+
                 const rowName = `versions[${docsVersionIndex}]`;
+                const label = selectedOption.dataset.label || '';
+                const slug = selectedOption.dataset.slug || '';
+                const ref = selectedOption.dataset.ref || selectedOption.value || '';
                 const row = document.createElement('tr');
+                row.dataset.docsVersionRow = '';
                 row.innerHTML = `
                     <td>
-                        <input class="text fullwidth" type="text" name="${rowName}[label]" value="" placeholder="5.x">
                         <input type="hidden" name="${rowName}[isDefault]" value="0">
+                        <input type="hidden" name="${rowName}[delete]" value="0" data-delete-input>
+                        <input type="hidden" name="${rowName}[ref]" value="${escapeDocsVersionValue(ref)}">
+                        <input type="hidden" name="${rowName}[sortOrder]" value="${docsVersionIndex}" data-sort-order-input>
+                        <input id="docs-version-label-${docsVersionIndex}" class="text fullwidth" type="text" name="${rowName}[label]" value="${escapeDocsVersionValue(label)}" placeholder="5.x">
                     </td>
-                    <td><input class="text fullwidth" type="text" name="${rowName}[slug]" value="" placeholder="v5"></td>
-                    <td><input class="text fullwidth" type="text" name="${rowName}[ref]" value="" placeholder="craft-5"></td>
                     <td>
-                        <div class="select">
-                            <select name="${rowName}[status]">
-                                {% for statusValue, statusLabel in versionStatusOptions %}
-                                    <option value="{{ statusValue }}" {{ statusValue == 'stable' ? 'selected' : '' }}>{{ statusLabel }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <input type="hidden" name="${rowName}[sortOrder]" value="${docsVersionIndex}">
+                        <input id="docs-version-slug-${docsVersionIndex}" class="text code" type="text" name="${rowName}[slug]" value="${escapeDocsVersionValue(slug)}" placeholder="v5">
                     </td>
-                    <td><span class="light">{{ "Never"|t('docs-manager') }}</span></td>
-                    <td><label><input type="checkbox" name="${rowName}[delete]" value="1"></label></td>
+                    <td>
+                        <div class="lr-inline-flex lr-gap-4">
+                            <input type="hidden" name="${rowName}[status]" value="stable">
+                            <button type="button" id="docs-version-retired-${docsVersionIndex}" class="lightswitch small" data-docs-version-retired-switch role="switch" aria-checked="false" aria-label="{{ 'Retired'|t('docs-manager') }}">
+                                <div class="lightswitch-container">
+                                    <div class="handle"></div>
+                                </div>
+                                <input type="hidden" name="${rowName}[retired]" value="">
+                            </button>
+                            <label for="docs-version-retired-${docsVersionIndex}">{{ "Retired"|t('docs-manager') }}</label>
+                        </div>
+                    </td>
+                    <td class="thin">
+                        <button type="button" class="btn icon delete" data-delete-docs-version title="{{ 'Delete'|t('docs-manager') }}" aria-label="{{ 'Delete'|t('docs-manager') }}"></button>
+                    </td>
                 `;
-                docsVersionsTable.appendChild(row);
+                const metaRow = document.createElement('tr');
+                metaRow.dataset.docsVersionMetaRow = '';
+                metaRow.innerHTML = `
+                    <td colspan="4" class="light">
+                        {{ "Git Ref"|t('docs-manager') }}: <code>${escapeDocsVersionValue(ref)}</code>
+                        <span aria-hidden="true"> · </span>
+                        {{ "Last Synced"|t('docs-manager') }}: {{ "Never"|t('docs-manager') }}
+                    </td>
+                `;
+                docsVersionsList.appendChild(row);
+                docsVersionsList.appendChild(metaRow);
+                sortDocsVersionRows();
+                selectedOption.remove();
                 docsVersionIndex++;
+                refreshDocsVersionCandidateState();
             });
+
+            sortDocsVersionRows();
+            refreshDocsVersionCandidateState();
         }
     {% endif %}
 

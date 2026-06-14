@@ -1,0 +1,110 @@
+{#
+ # Embedded docs versions editor for source edit tabs.
+ #}
+
+{% import "_includes/forms" as forms %}
+
+<div class="pane">
+    <div class="lr-mb-24">
+        <h2 class="lr-heading-tight">{{ "Docs Versions"|t('docs-manager') }}</h2>
+        <p class="light">{{ "Add pinned documentation versions that sync from non-main Git refs. The main ref is always the default docs URL."|t('docs-manager') }}</p>
+    </div>
+
+    <div class="lr-table-scroll-x">
+        <table class="data fullwidth">
+            <thead>
+                <tr>
+                    <th>{{ "Label"|t('docs-manager') }}</th>
+                    <th>{{ "URL Slug"|t('docs-manager') }}</th>
+                    <th>{{ "Status"|t('docs-manager') }}</th>
+                    <th class="thin"></th>
+                </tr>
+            </thead>
+            <tbody id="docs-versions-list">
+                {% for version in sourceVersions %}
+                    {% set rowName = 'versions[' ~ loop.index0 ~ ']' %}
+                    <tr data-docs-version-row>
+                        <td>
+                            <input type="hidden" name="{{ rowName }}[id]" value="{{ version.id }}">
+                            <input type="hidden" name="{{ rowName }}[isDefault]" value="{{ version.isDefault ? '1' : '0' }}">
+                            <input type="hidden" name="{{ rowName }}[delete]" value="0" data-delete-input>
+                            <input type="hidden" name="{{ rowName }}[ref]" value="{{ version.ref }}">
+                            <input type="hidden" name="{{ rowName }}[sortOrder]" value="{{ loop.index0 }}" data-sort-order-input>
+                            <input id="docs-version-label-{{ loop.index0 }}" class="text fullwidth" type="text" name="{{ rowName }}[label]" value="{{ version.label }}" {{ version.isDefault ? 'readonly' : '' }}>
+                            {% if version.hasErrors('label') %}<ul class="errors"><li>{{ version.getFirstError('label') }}</li></ul>{% endif %}
+                        </td>
+                        <td>
+                            <input id="docs-version-slug-{{ loop.index0 }}" class="text code" type="text" name="{{ rowName }}[slug]" value="{{ version.slug }}" placeholder="{{ version.isDefault ? 'default' : 'v5' }}" {{ version.isDefault ? 'readonly' : '' }}>
+                            {% if version.hasErrors('slug') %}<ul class="errors"><li>{{ version.getFirstError('slug') }}</li></ul>{% endif %}
+                        </td>
+                        <td>
+                            {% if version.isDefault %}
+                                <input type="hidden" name="{{ rowName }}[status]" value="latest">
+                                <span class="status green"></span>{{ "Latest"|t('docs-manager') }}
+                            {% else %}
+                                <input type="hidden" name="{{ rowName }}[status]" value="stable">
+                                {{ forms.lightswitch({
+                                    id: 'docs-version-retired-' ~ loop.index0,
+                                    name: rowName ~ '[retired]',
+                                    on: version.status == 'retired',
+                                    small: true,
+                                    label: 'Retired'|t('docs-manager'),
+                                }) }}
+                                {% if version.hasErrors('status') %}<ul class="errors"><li>{{ version.getFirstError('status') }}</li></ul>{% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="thin">
+                            {% if version.isDefault %}
+                                <span class="light">-</span>
+                            {% else %}
+                                <button type="button" class="btn icon delete" data-delete-docs-version title="{{ 'Delete'|t('docs-manager') }}" aria-label="{{ 'Delete'|t('docs-manager') }}"></button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr data-docs-version-meta-row>
+                        <td colspan="4" class="light">
+                            {{ "Git Ref"|t('docs-manager') }}: <code>{{ version.ref }}</code>
+                            <span aria-hidden="true"> · </span>
+                            {{ "Last Synced"|t('docs-manager') }}:
+                            {% if version.lastSyncedAt %}
+                                {{ version.lastSyncedAt|lrDatetime }}
+                            {% else %}
+                                {{ "Never"|t('docs-manager') }}
+                            {% endif %}
+                            {% if version.lastSyncStatus == 'error' and version.lastSyncError %}
+                                <div class="error lr-mt-8">{{ version.lastSyncError|nl2br }}</div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<div class="pane">
+    <h2 class="lr-heading-tight">{{ "Add version"|t('docs-manager') }}</h2>
+
+    {% if sourceVersionCandidates|length %}
+        <div class="lr-control-row">
+            <div class="select">
+                <select id="docs-version-candidate-select" aria-label="{{ 'Select a version branch...'|t('docs-manager') }}">
+                    {% for candidate in sourceVersionCandidates %}
+                        <option
+                            value="{{ candidate.ref }}"
+                            data-label="{{ candidate.label }}"
+                            data-slug="{{ candidate.slug }}"
+                            data-ref="{{ candidate.ref }}"
+                        >
+                            {{ candidate.label }} &mdash; {{ candidate.ref }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="button" class="btn" id="add-docs-version-btn">{{ "Add version"|t('docs-manager') }}</button>
+        </div>
+    {% endif %}
+
+    <p id="docs-version-empty-candidates" class="light{{ sourceVersionCandidates|length ? ' hidden' : '' }}">{{ "No additional docs versions found."|t('docs-manager') }}</p>
+</div>
