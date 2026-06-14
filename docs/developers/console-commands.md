@@ -152,7 +152,7 @@ ddev craft docs-manager/hero/generate-all --force
 
 ## Sync All Sources @since(5.0.0)
 
-Syncs all enabled sources to the database.
+Syncs all enabled sources to the database. Each source syncs every configured docs version, including pinned refs such as `craft-5` @since(5.2.0).
 
 ```bash title="PHP"
 php craft docs-manager/sync
@@ -176,11 +176,13 @@ php craft docs-manager/sync --plugin=search-manager
 ddev craft docs-manager/sync --plugin=search-manager
 ```
 
+Syncing all sources returns a non-zero exit code if any source or configured docs version fails.
+
 ---
 
 ## Sync Single Source @since(5.0.0)
 
-Syncs a specific source's docs to the database. Use this after editing markdown files locally.
+Syncs a specific source's docs to the database. Use this after editing markdown files locally. All configured docs versions for that source are synced @since(5.2.0).
 
 ```bash title="PHP"
 php craft docs-manager/sync/plugin <plugin>
@@ -202,11 +204,13 @@ ddev craft docs-manager/sync/plugin search-manager
 
 If the source isn't registered yet, a **local** source is created automatically the first time you sync it @since(5.2.0) — as long as `<plugin>` resolves to a real plugin/module directory (one containing a `composer.json`) under the configured **Local Plugin Base Path**. So a local plugin goes from zero to synced in a single command, with no manual onboarding. GitHub sources must still be added in the CP, since a repository URL can't be derived from a handle.
 
+For local sources, pinned docs versions are read from the configured Git ref with `git show`. For GitHub sources, pinned docs versions are read with the GitHub API `ref` parameter.
+
 ---
 
 ## Check Version @since(5.0.0)
 
-Checks the detected version for a source. Reports which detection method succeeded (GitHub API, Packagist, git tags, or `composer.json`).
+Checks the detected package/source version for a source. Reports which detection method succeeded (GitHub API, Packagist, git tags, or `composer.json`). This does not list configured docs-version rows.
 
 ```bash title="PHP"
 php craft docs-manager/sync/version <plugin>
