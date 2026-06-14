@@ -22,6 +22,7 @@ Source (Local/GitHub)  ──  Sync  ──>  Database  ──>  Frontend Templa
 
 - **Dual Source Support** — Sync from local filesystem or GitHub API per-source
 - **Plugin & Theme Sources** — Each source has a `kind` (plugin or theme) for filtering
+- **Versioned Docs** — Keep default docs at `/docs/...` and sync pinned Git refs to `/docs/v5/...`, `/docs/v4/...`, and other versioned URLs
 - **Automatic Sync** — Scheduled sync via Craft queue (hourly, daily, weekly, monthly)
 - **Code Extraction** — Auto-generate docs skeleton from PHP source (settings, permissions, commands, events, Twig variables)
 - **CommonMark Parser** — Full markdown parsing with syntax highlighting, anchor generation, and `.md` link stripping

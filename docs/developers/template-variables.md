@@ -114,6 +114,7 @@ Get documentation pages for a source.
 ```twig
 {% set pages = craft.docsManager.getPages('search-manager') %}
 {% set pages = craft.docsManager.getPages('search-manager', 'get-started') %}
+{% set v5Pages = craft.docsManager.getPages('search-manager', null, 'v5') %}
 ```
 
 **Parameters:**
@@ -122,6 +123,7 @@ Get documentation pages for a source.
 |-----------|------|-------------|
 | `handle` | `string` | Source handle |
 | `category` | `string\|null` | Optional category filter |
+| `version` | `string\|null` | Optional docs version slug such as `v5`; `null` reads the default docs version |
 
 **Returns:** `SourceDoc[]`
 
@@ -133,6 +135,7 @@ Get a single documentation page by source handle and slug.
 
 ```twig
 {% set page = craft.docsManager.getPage('search-manager', 'get-started/installation') %}
+{% set v5Page = craft.docsManager.getPage('search-manager', 'get-started/installation', 'v5') %}
 {{ page.htmlContent|raw }}
 ```
 
@@ -142,6 +145,7 @@ Get a single documentation page by source handle and slug.
 |-----------|------|-------------|
 | `handle` | `string` | Source handle |
 | `slug` | `string` | Page slug |
+| `version` | `string\|null` | Optional docs version slug such as `v5`; `null` reads the default docs version |
 
 **Returns:** `SourceDoc|null`
 
@@ -171,6 +175,7 @@ Get navigation structure from `.sidebar.json`.
 
 ```twig
 {% set nav = craft.docsManager.getNavigation('search-manager') %}
+{% set v5Nav = craft.docsManager.getNavigation('search-manager', 'v5') %}
 {% for key, section in nav %}
     <h3>{{ section.label }}</h3>
     {% for page in section.pages %}
@@ -184,8 +189,71 @@ Get navigation structure from `.sidebar.json`.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `handle` | `string` | Source handle |
+| `version` | `string\|null` | Optional docs version slug such as `v5`; `null` reads the default docs version |
 
 **Returns:** `array|null`
+
+---
+
+### `getVersions()` @since(5.2.0)
+
+Get configured docs versions for a source.
+
+```twig
+{% set versions = craft.docsManager.getVersions('search-manager') %}
+{% for version in versions %}
+    {{ version.label }} — {{ version.status }}
+{% endfor %}
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `handle` | `string` | Source handle |
+
+**Returns:** `SourceVersionRecord[]`
+
+---
+
+### `getVersion()` @since(5.2.0)
+
+Get the configured docs version for the current URL context.
+
+```twig
+{% set currentVersion = craft.docsManager.getVersion('search-manager', 'v5') %}
+{% set defaultVersion = craft.docsManager.getVersion('search-manager') %}
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `handle` | `string` | Source handle |
+| `version` | `string\|null` | Optional docs version slug such as `v5`; `null` returns the default docs version |
+
+**Returns:** `SourceVersionRecord|null`
+
+---
+
+### `getDocUrl()` @since(5.2.0)
+
+Build a documentation URL for a source, page slug, and optional docs version.
+
+```twig
+{{ craft.docsManager.getDocUrl('search-manager', 'get-started/installation') }}
+{{ craft.docsManager.getDocUrl('search-manager', 'get-started/installation', 'v5') }}
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `handle` | `string` | Source handle |
+| `slug` | `string` | Page slug |
+| `version` | `string\|null` | Optional docs version slug such as `v5`; `null` builds the default docs URL |
+
+**Returns:** `string`
 
 ---
 
@@ -213,6 +281,7 @@ Get previous and next pages for sequential navigation.
 
 ```twig
 {% set prevNext = craft.docsManager.getPrevNextPages('search-manager', currentSlug) %}
+{% set v5PrevNext = craft.docsManager.getPrevNextPages('search-manager', currentSlug, 'v5') %}
 {% if prevNext.prev %}
     <a href="...">{{ prevNext.prev.title }}</a>
 {% endif %}
@@ -227,6 +296,7 @@ Get previous and next pages for sequential navigation.
 |-----------|------|-------------|
 | `handle` | `string` | Source handle |
 | `currentSlug` | `string` | Current page slug |
+| `version` | `string\|null` | Optional docs version slug such as `v5`; `null` reads the default docs version |
 
 **Returns:** `array{prev: SourceDoc|null, next: SourceDoc|null}`
 

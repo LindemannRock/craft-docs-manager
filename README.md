@@ -1,3 +1,5 @@
+![Docs Manager](docs/images/hero.webp)
+
 # Docs Manager for Craft CMS
 
 [![Latest Version](https://img.shields.io/packagist/v/lindemannrock/craft-docs-manager.svg)](https://packagist.org/packages/lindemannrock/craft-docs-manager)
@@ -16,6 +18,7 @@ This plugin is in active development and not yet available on the Craft Plugin S
 
 - **Dual Source Support** — Sync from local filesystem or GitHub API per-source
 - **Plugin & Theme Sources** — Each source has a kind (plugin or theme) for filtering
+- **Versioned Docs** — Sync default docs from `main` and pinned versions from refs such as `craft-5`
 - **Automatic Sync** — Scheduled sync via Craft queue (hourly, daily, weekly, monthly)
 - **Custom Pages** — CP-managed pages (FAQ, features, pricing, support) attached to a source alongside synced docs
 - **Code Extraction** — Auto-generate docs skeleton from PHP source (Settings, permissions, commands, events, Twig variables)

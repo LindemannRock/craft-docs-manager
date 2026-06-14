@@ -33,6 +33,28 @@ Each source can sync from one of two source types:
 > [!NOTE]
 > For **local** sources you can skip these steps entirely: run `php craft docs-manager/sync/plugin <handle>` (or `ddev craft …`) and the source is created automatically on first sync, as long as the handle matches a plugin/module folder containing a `composer.json` under your **Local Plugin Base Path**. GitHub sources must be added here in the CP. @since(5.2.0)
 
+## Docs Versions @since(5.2.0)
+
+Each source is added once. Versioned documentation is configured as child rows on the source edit page, not as duplicate sources.
+
+The default version is always `main`, uses the unversioned docs URL, and is labeled Latest:
+
+```text
+/plugins/{handle}/docs/get-started/installation
+```
+
+Pinned versions sync from non-main Git refs and use a constrained `vN` URL segment:
+
+```text
+/plugins/{handle}/docs/v5/get-started/installation
+/plugins/{handle}/docs/v4/get-started/installation
+```
+
+Use pinned versions for frozen maintenance branches such as `craft-5` or `craft-4`. The version row stores the display label (`5.x`), URL slug (`v5`), Git ref (`craft-5`), status (`stable`, `beta`, `alpha`, or `retired`), sync time, and last sync error.
+
+> [!NOTE]
+> `main` is always the default docs ref. Alpha or beta docs should use a non-main ref with a versioned URL such as `/docs/v7/...`.
+
 ## Documentation Structure
 
 Each source's docs live in a `/docs/` folder:
