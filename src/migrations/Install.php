@@ -177,7 +177,7 @@ class Install extends Migration
 
             'sourceId' => $this->integer()->notNull(),
             'label' => $this->string()->notNull(),
-            'slug' => $this->string(20)->null(),
+            'slug' => $this->string(40)->null(),
             'ref' => $this->string()->notNull()->defaultValue('main'),
             'status' => $this->string(20)->notNull()->defaultValue('stable'),
             'isDefault' => $this->boolean()->notNull()->defaultValue(false),

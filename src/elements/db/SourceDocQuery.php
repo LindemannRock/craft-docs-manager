@@ -179,7 +179,11 @@ class SourceDocQuery extends ElementQuery
         }
 
         if ($this->version !== null) {
-            $this->subQuery->andWhere(Db::parseParam('docsmanager_pages.version', $this->version));
+            if ($this->version === '') {
+                $this->subQuery->andWhere(['docsmanager_pages.version' => '']);
+            } else {
+                $this->subQuery->andWhere(Db::parseParam('docsmanager_pages.version', $this->version));
+            }
         }
 
         if ($this->slug) {
