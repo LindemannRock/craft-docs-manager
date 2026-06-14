@@ -63,6 +63,7 @@ class SyncSinglePluginJob extends BaseJob implements RetryableJobInterface
             $this->logInfo("Plugin synced successfully: {$this->sourceHandle}", [
                 'pages' => $result['pages'],
                 'version' => $result['version'],
+                'versions' => $result['versions'] ?? [],
             ]);
         } else {
             $this->logError("Failed to sync plugin: {$this->sourceHandle}", [

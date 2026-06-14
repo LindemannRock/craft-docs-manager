@@ -16,6 +16,7 @@ use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\SourceDoc;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
+use lindemannrock\docsmanager\records\SourceVersionRecord;
 use lindemannrock\logginglibrary\traits\LoggingTrait;
 
 /**
@@ -52,6 +53,7 @@ class SyncService extends Component
             'pages' => 0,
             'errors' => [],
             'version' => null,
+            'versions' => [],
         ];
 
         try {
@@ -69,101 +71,28 @@ class SyncService extends Component
                 return $results;
             }
 
-            // 3. Get sidebar structure (new format: .sidebar.json)
-            $sidebarData = $this->loadSidebar($plugin, $pluginPath);
-            if (!$sidebarData) {
-                $results['errors'][] = "No .sidebar.json found";
-                return $results;
-            }
+            $versions = $this->getConfiguredVersions($plugin);
+            foreach ($versions as $version) {
+                $versionResult = $this->syncPluginVersion($plugin, $pluginPath, $version);
+                $results['pages'] += $versionResult['pages'];
+                $results['errors'] = array_merge($results['errors'], $versionResult['errors']);
+                $results['versions'][] = [
+                    'label' => $version->label,
+                    'slug' => $version->slug,
+                    'ref' => $version->ref,
+                    'pages' => $versionResult['pages'],
+                    'success' => $versionResult['errors'] === [],
+                ];
 
-            // 4. Get plugin version
-            if ($plugin->sourceType !== 'github-api') {
-                $versionData = DocsManager::getInstance()->versionDetector->getPluginVersion($handle, $pluginPath);
-            } else {
-                $versionData = null;
-            }
-
-            if ($versionData) {
-                $plugin->currentVersion = $versionData['version'];
-
-                if ($versionData['releaseDate']) {
-                    try {
-                        $date = new \DateTime($versionData['releaseDate']);
-                        $plugin->releaseDate = $date->format('Y-m-d H:i:s');
-                    } catch (\Exception $e) {
-                        $plugin->releaseDate = null;
-                    }
-                } else {
-                    $plugin->releaseDate = null;
-                }
-
-                $results['version'] = $versionData['version'];
-            }
-
-            // 5. Sync changelog content
-            try {
-                if ($plugin->sourceType === 'github-api') {
-                    $changelogContent = $this->fetchGithubFile($plugin, 'CHANGELOG.md');
-                } else {
-                    $changelogPath = $pluginPath . '/CHANGELOG.md';
-                    $changelogContent = file_exists($changelogPath) ? file_get_contents($changelogPath) : null;
-                }
-                $plugin->changelogContent = $changelogContent ?: null;
-            } catch (\Exception $e) {
-                // Changelog is optional — don't fail the sync
-                $this->logInfo('Changelog not found', ['handle' => $handle, 'error' => $e->getMessage()]);
-            }
-
-            // 6. Sync icon (src/icon.svg)
-            try {
-                if ($plugin->sourceType === 'github-api') {
-                    $iconContent = $this->fetchGithubFile($plugin, 'src/icon.svg');
-                    $plugin->iconSvg = is_string($iconContent) ? $iconContent : null;
-                } else {
-                    $iconPath = $pluginPath . '/src/icon.svg';
-                    $plugin->iconSvg = file_exists($iconPath) ? file_get_contents($iconPath) : null;
-                }
-            } catch (\Exception) {
-                $plugin->iconSvg = null;
-            }
-
-            // 7. Process each section from sidebar
-            $syncedSlugs = [];
-            $globalOrder = 0;
-            foreach ($sidebarData as $sectionIndex => $section) {
-                $sectionTitle = $section['title'] ?? 'Unknown';
-                $children = $section['children'] ?? [];
-
-                foreach ($children as $childIndex => $childPath) {
-                    try {
-                        $slug = SlugHandleHelper::normalizePathSlug((string) $childPath, '');
-                        if ($slug === '') {
-                            $results['errors'][] = "Failed to sync '{$childPath}': normalized slug is empty";
-                            continue;
-                        }
-                        if (isset($syncedSlugs[$slug])) {
-                            $results['errors'][] = "Failed to sync '{$childPath}': normalized slug '{$slug}' is duplicated in the sidebar";
-                            continue;
-                        }
-
-                        $globalOrder++;
-                        $this->syncPageFromFile($plugin, $pluginPath, $sectionTitle, $childPath, $globalOrder);
-                        $syncedSlugs[$slug] = true;
-                        $results['pages']++;
-                    } catch (\Exception $e) {
-                        $results['errors'][] = "Failed to sync '{$childPath}': {$e->getMessage()}";
-                    }
+                if ($version->isDefault && $versionResult['version']) {
+                    $results['version'] = $versionResult['version'];
                 }
             }
 
-            // 8. Cleanup orphan pages (pages no longer in sidebar)
-            $this->cleanupOrphanPages($plugin->id, array_keys($syncedSlugs));
-
-            // 9. Update source last synced time
             $plugin->lastSyncedAt = gmdate('Y-m-d H:i:s');
             $plugin->save();
 
-            $results['success'] = true;
+            $results['success'] = $results['errors'] === [];
         } catch (\Exception $e) {
             $results['errors'][] = "Sync failed: {$e->getMessage()}";
             $this->logError('Failed to sync plugin', ['handle' => $handle, 'error' => $e->getMessage()]);
@@ -173,24 +102,170 @@ class SyncService extends Component
     }
 
     /**
+     * @return SourceVersionRecord[]
+     */
+    protected function getConfiguredVersions(SourceRecord $plugin): array
+    {
+        /** @var SourceVersionRecord[] $versions */
+        $versions = SourceVersionRecord::find()
+            ->where(['sourceId' => $plugin->id])
+            ->orderBy(['sortOrder' => SORT_ASC, 'id' => SORT_ASC])
+            ->all();
+
+        if ($versions !== []) {
+            return $versions;
+        }
+
+        $version = new SourceVersionRecord();
+        $version->sourceId = $plugin->id;
+        $version->label = $plugin->currentVersion ? preg_replace('/^(\d+).*/', '$1.x', $plugin->currentVersion) : 'Current';
+        $version->slug = null;
+        $version->ref = 'main';
+        $version->status = SourceVersionRecord::STATUS_LATEST;
+        $version->isDefault = true;
+        $version->sortOrder = 0;
+        $version->save(false);
+
+        return [$version];
+    }
+
+    /**
+     * Sync one configured docs version for a source.
+     *
+     * @return array{pages: int, errors: array<int, string>, version: string|null}
+     */
+    protected function syncPluginVersion(SourceRecord $plugin, string $pluginPath, SourceVersionRecord $version): array
+    {
+        $result = [
+            'pages' => 0,
+            'errors' => [],
+            'version' => null,
+        ];
+        $versionSlug = $this->pageVersionValue($version);
+
+        try {
+            $sidebarData = $this->loadSidebar($plugin, $pluginPath, $version);
+            if (!$sidebarData) {
+                throw new \Exception("No .sidebar.json found for {$version->label}");
+            }
+
+            if ((bool) $version->isDefault) {
+                $this->syncDefaultSourceMetadata($plugin, $pluginPath, $version, $result);
+            }
+
+            $syncedSlugs = [];
+            $globalOrder = 0;
+            foreach ($sidebarData as $section) {
+                $sectionTitle = $section['title'] ?? 'Unknown';
+                $children = $section['children'] ?? [];
+
+                foreach ($children as $childPath) {
+                    try {
+                        $slug = SlugHandleHelper::normalizePathSlug((string) $childPath, '');
+                        if ($slug === '') {
+                            $result['errors'][] = "Failed to sync '{$childPath}' ({$version->label}): normalized slug is empty";
+                            continue;
+                        }
+                        if (isset($syncedSlugs[$slug])) {
+                            $result['errors'][] = "Failed to sync '{$childPath}' ({$version->label}): normalized slug '{$slug}' is duplicated in the sidebar";
+                            continue;
+                        }
+
+                        $globalOrder++;
+                        $this->syncPageFromFile($plugin, $pluginPath, $version, $sectionTitle, $childPath, $globalOrder);
+                        $syncedSlugs[$slug] = true;
+                        $result['pages']++;
+                    } catch (\Exception $e) {
+                        $result['errors'][] = "Failed to sync '{$childPath}' ({$version->label}): {$e->getMessage()}";
+                    }
+                }
+            }
+
+            $this->cleanupOrphanPages($plugin->id, $versionSlug, array_keys($syncedSlugs));
+            $version->lastSyncedAt = gmdate('Y-m-d H:i:s');
+            $version->lastSyncStatus = $result['errors'] === [] ? 'success' : 'error';
+            $version->lastSyncError = $result['errors'] === [] ? null : implode("\n", $result['errors']);
+            $version->save(false);
+        } catch (\Exception $e) {
+            $message = "Failed to sync {$version->label}: {$e->getMessage()}";
+            $result['errors'][] = $message;
+            $version->lastSyncStatus = 'error';
+            $version->lastSyncError = $message;
+            $version->save(false);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array{pages: int, errors: array<int, string>, version: string|null} $result
+     */
+    protected function syncDefaultSourceMetadata(SourceRecord $plugin, string $pluginPath, SourceVersionRecord $version, array &$result): void
+    {
+        if ($plugin->sourceType !== 'github-api') {
+            $versionData = DocsManager::getInstance()->versionDetector->getPluginVersion($plugin->handle, $pluginPath);
+        } else {
+            $versionData = null;
+        }
+
+        if ($versionData) {
+            $plugin->currentVersion = $versionData['version'];
+
+            if ($versionData['releaseDate']) {
+                try {
+                    $date = new \DateTime($versionData['releaseDate']);
+                    $plugin->releaseDate = $date->format('Y-m-d H:i:s');
+                } catch (\Exception) {
+                    $plugin->releaseDate = null;
+                }
+            } else {
+                $plugin->releaseDate = null;
+            }
+
+            $result['version'] = $versionData['version'];
+        }
+
+        try {
+            if ($plugin->sourceType === 'github-api') {
+                $changelogContent = $this->fetchGithubFile($plugin, 'CHANGELOG.md', $version->ref);
+            } else {
+                $changelogPath = $pluginPath . '/CHANGELOG.md';
+                $changelogContent = file_exists($changelogPath) ? file_get_contents($changelogPath) : null;
+            }
+            $plugin->changelogContent = $changelogContent ?: null;
+        } catch (\Exception $e) {
+            $this->logInfo('Changelog not found', ['handle' => $plugin->handle, 'error' => $e->getMessage()]);
+        }
+
+        try {
+            if ($plugin->sourceType === 'github-api') {
+                $iconContent = $this->fetchGithubFile($plugin, 'src/icon.svg', $version->ref);
+                $plugin->iconSvg = is_string($iconContent) ? $iconContent : null;
+            } else {
+                $iconPath = $pluginPath . '/src/icon.svg';
+                $plugin->iconSvg = file_exists($iconPath) ? file_get_contents($iconPath) : null;
+            }
+        } catch (\Exception) {
+            $plugin->iconSvg = null;
+        }
+    }
+
+    /**
      * Load sidebar structure from .sidebar.json
      *
      * @param SourceRecord $plugin Plugin record
      * @param string $pluginPath Plugin path
      * @return array|null Sidebar data
      */
-    protected function loadSidebar(SourceRecord $plugin, string $pluginPath): ?array
+    protected function loadSidebar(SourceRecord $plugin, string $pluginPath, SourceVersionRecord $version): ?array
     {
         if ($plugin->sourceType === 'github-api') {
-            return $this->fetchGithubFile($plugin, 'docs/.sidebar.json');
+            return $this->fetchGithubFile($plugin, 'docs/.sidebar.json', $version->ref);
         }
 
-        $sidebarPath = $pluginPath . '/docs/.sidebar.json';
-        if (!file_exists($sidebarPath)) {
-            return null;
-        }
+        $content = $this->readLocalFile($pluginPath, 'docs/.sidebar.json', $version);
 
-        return json_decode(file_get_contents($sidebarPath), true);
+        return $content === null ? null : json_decode($content, true);
     }
 
     /**
@@ -202,22 +277,22 @@ class SyncService extends Component
      * @param string $filePath Relative path (e.g., "get-started/requirements")
      * @param int $order Page order
      */
-    protected function syncPageFromFile(SourceRecord $plugin, string $pluginPath, string $category, string $filePath, int $order): void
+    protected function syncPageFromFile(SourceRecord $plugin, string $pluginPath, SourceVersionRecord $version, string $category, string $filePath, int $order): void
     {
         // Build full path to markdown file
         $fullPath = $pluginPath . '/docs/' . $filePath . '.md';
 
         if ($plugin->sourceType === 'github-api') {
-            $markdown = $this->fetchGithubFile($plugin, 'docs/' . $filePath . '.md');
+            $markdown = $this->fetchGithubFile($plugin, 'docs/' . $filePath . '.md', $version->ref);
         } else {
-            if (!file_exists($fullPath)) {
+            $markdown = $this->readLocalFile($pluginPath, 'docs/' . $filePath . '.md', $version);
+            if ($markdown === null) {
                 throw new \Exception("File not found: {$fullPath}");
             }
-            $markdown = file_get_contents($fullPath);
         }
 
         // Parse markdown
-        $parsed = DocsManager::getInstance()->parser->parseMarkdown($markdown, null, true, $this->buildImageBaseUrl($plugin));
+        $parsed = DocsManager::getInstance()->parser->parseMarkdown($markdown, null, true, $this->buildImageBaseUrl($plugin, $version));
 
         // Extract title from first H1 heading or use filename
         $title = $this->extractTitle($markdown, $filePath);
@@ -234,6 +309,7 @@ class SyncService extends Component
         // Find existing element or create new one
         $page = SourceDoc::find()
             ->sourceId($plugin->id)
+            ->version($this->pageVersionValue($version))
             ->slug($slug)
             ->status(null)
             ->one();
@@ -241,6 +317,7 @@ class SyncService extends Component
         if (!$page) {
             $page = new SourceDoc();
             $page->sourceId = $plugin->id;
+            $page->version = $this->pageVersionValue($version);
             $page->slug = $slug;
         }
 
@@ -249,6 +326,7 @@ class SyncService extends Component
 
         // Update non-translatable data
         $page->category = $categoryKey;
+        $page->version = $this->pageVersionValue($version);
         $page->order = $order;
 
         // Update translatable data
@@ -349,17 +427,18 @@ class SyncService extends Component
      * @param int $sourceId Source record ID
      * @param string[] $syncedSlugs Slugs that were synced in this run
      */
-    protected function cleanupOrphanPages(int $sourceId, array $syncedSlugs): void
+    protected function cleanupOrphanPages(int $sourceId, string $version, array $syncedSlugs): void
     {
         $existingPages = SourceDoc::find()
             ->sourceId($sourceId)
+            ->version($version)
             ->status(null)
             ->all();
 
         foreach ($existingPages as $page) {
             if (!in_array($page->slug, $syncedSlugs, true)) {
                 Craft::$app->elements->deleteElement($page);
-                $this->logInfo('Deleted orphan doc page', ['slug' => $page->slug, 'sourceId' => $sourceId]);
+                $this->logInfo('Deleted orphan doc page', ['slug' => $page->slug, 'sourceId' => $sourceId, 'version' => $version]);
             }
         }
     }
@@ -520,7 +599,7 @@ class SyncService extends Component
      * Local source → local controller route (served from disk).
      * GitHub API source → raw.githubusercontent.com on the default branch.
      */
-    protected function buildImageBaseUrl(SourceRecord $plugin): ?string
+    protected function buildImageBaseUrl(SourceRecord $plugin, SourceVersionRecord $version): ?string
     {
         if ($plugin->sourceType === 'github-api') {
             if (!$plugin->repositoryUrl || !preg_match('#github\.com/([^/]+)/([^/]+)#', $plugin->repositoryUrl, $m)) {
@@ -528,10 +607,51 @@ class SyncService extends Component
             }
             $owner = $m[1];
             $repo = rtrim($m[2], '/');
-            return "https://raw.githubusercontent.com/{$owner}/{$repo}/main/docs/images/";
+            return "https://raw.githubusercontent.com/{$owner}/{$repo}/{$version->ref}/docs/images/";
         }
 
-        return '/plugins/' . $plugin->handle . '/docs/images/';
+        $versionSegment = $this->pageVersionValue($version) !== '' ? $this->pageVersionValue($version) . '/' : '';
+
+        return '/plugins/' . $plugin->handle . '/docs/' . $versionSegment . 'images/';
+    }
+
+    protected function readLocalFile(string $pluginPath, string $filePath, SourceVersionRecord $version): ?string
+    {
+        if (preg_match('#(^|/)\.\.(/|$)#', $filePath) === 1 || str_contains($filePath, "\0") || str_starts_with($filePath, '/')) {
+            return null;
+        }
+
+        if ((bool) $version->isDefault) {
+            $fullPath = $pluginPath . '/' . $filePath;
+            if (!is_file($fullPath)) {
+                return null;
+            }
+
+            $content = file_get_contents($fullPath);
+            return is_string($content) ? $content : null;
+        }
+
+        if (preg_match('/^[A-Za-z0-9._\/-]+$/', $version->ref) !== 1) {
+            return null;
+        }
+
+        $spec = $version->ref . ':' . $filePath;
+        $command = sprintf('git -C %s show %s', escapeshellarg($pluginPath), escapeshellarg($spec));
+        $descriptors = [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $process = proc_open($command, $descriptors, $pipes);
+        if (!is_resource($process)) {
+            return null;
+        }
+
+        $content = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $exitCode = proc_close($process);
+
+        return $exitCode === 0 && is_string($content) ? $content : null;
     }
 
     /**
@@ -539,7 +659,7 @@ class SyncService extends Component
      * @param string $filePath Path to file (e.g., 'docs/index.json' or 'README.md')
      * @return array|string|null Decoded JSON array, raw content, or null on failure
      */
-    protected function fetchGithubFile(SourceRecord $plugin, string $filePath)
+    protected function fetchGithubFile(SourceRecord $plugin, string $filePath, string $ref = 'main')
     {
         $settings = DocsManager::getInstance()->getSettings();
         $token = App::env($settings->githubToken);
@@ -559,7 +679,7 @@ class SyncService extends Component
         $repo = $matches[2];
 
         // Fetch file from GitHub API
-        $url = "https://api.github.com/repos/{$owner}/{$repo}/contents/{$filePath}";
+        $url = "https://api.github.com/repos/{$owner}/{$repo}/contents/{$filePath}?ref=" . rawurlencode($ref);
 
         $ch = curl_init();
         curl_setopt_array($ch, [
@@ -592,5 +712,10 @@ class SyncService extends Component
 
         // Return raw content for markdown files
         return $content;
+    }
+
+    protected function pageVersionValue(SourceVersionRecord $version): string
+    {
+        return $version->slug ?? '';
     }
 }
