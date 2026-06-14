@@ -240,13 +240,17 @@ return [
     'Retired' => '廃止済み',
     'Never' => 'なし',
     'Add version' => 'バージョンを追加',
+    'Select a version branch...' => 'バージョンブランチを選択...',
+    'No additional docs versions found.' => '追加のドキュメントバージョンが見つかりません。',
+    'Remove docs version "{name}" from this source?' => 'このソースからドキュメントバージョン「{name}」を削除しますか？',
     'Could not save source versions.' => 'ソースバージョンを保存できませんでした。',
-    'Version URL slug must look like v5 or v6.' => 'バージョン URL スラッグは v5 または v6 の形式にしてください。',
+    'Version URL slug must look like v5, v6-beta, or v6-alpha.' => 'バージョン URL スラッグは v5、v6-beta、または v6-alpha の形式にしてください。',
     'Git ref contains invalid characters.' => 'Git ref に無効な文字が含まれています。',
     'Non-default versions require a URL slug.' => 'デフォルト以外のバージョンには URL スラッグが必要です。',
     'The default docs version must use the main ref.' => 'デフォルトのドキュメントバージョンは main ref を使用する必要があります。',
     'The default docs version cannot have a URL slug.' => 'デフォルトのドキュメントバージョンには URL スラッグを設定できません。',
     'The default docs version must be Latest.' => 'デフォルトのドキュメントバージョンは最新である必要があります。',
+    'Only the default docs version can be Latest.' => 'デフォルトのドキュメントバージョンのみ最新にできます。',
 
     // Pages: Index
     'Search pages...' => 'ページを検索...',

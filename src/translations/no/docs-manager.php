@@ -240,13 +240,17 @@ return [
     'Retired' => 'Avviklet',
     'Never' => 'Aldri',
     'Add version' => 'Legg til versjon',
+    'Select a version branch...' => 'Velg en versjonsgren...',
+    'No additional docs versions found.' => 'Ingen flere dokumentasjonsversjoner funnet.',
+    'Remove docs version "{name}" from this source?' => 'Fjern dokumentasjonsversjonen "{name}" fra denne kilden?',
     'Could not save source versions.' => 'Kildeversjoner kunne ikke lagres.',
-    'Version URL slug must look like v5 or v6.' => 'Versjons-URL-sluggen må se ut som v5 eller v6.',
+    'Version URL slug must look like v5, v6-beta, or v6-alpha.' => 'Versjons-URL-sluggen må se ut som v5, v6-beta eller v6-alpha.',
     'Git ref contains invalid characters.' => 'Git-ref inneholder ugyldige tegn.',
     'Non-default versions require a URL slug.' => 'Ikke-standardversjoner krever en URL-slug.',
     'The default docs version must use the main ref.' => 'Standardversjonen av dokumentasjonen må bruke main-ref.',
     'The default docs version cannot have a URL slug.' => 'Standardversjonen av dokumentasjonen kan ikke ha en URL-slug.',
     'The default docs version must be Latest.' => 'Standardversjonen av dokumentasjonen må være Nyeste.',
+    'Only the default docs version can be Latest.' => 'Bare standardversjonen av dokumentasjonen kan være Nyeste.',
 
     // Pages: Index
     'Search pages...' => 'Søk etter sider...',

@@ -240,13 +240,17 @@ return [
     'Retired' => 'Retirée',
     'Never' => 'Jamais',
     'Add version' => 'Ajouter une version',
+    'Select a version branch...' => 'Sélectionner une branche de version...',
+    'No additional docs versions found.' => 'Aucune version de documentation supplémentaire trouvée.',
+    'Remove docs version "{name}" from this source?' => 'Supprimer la version de documentation « {name} » de cette source ?',
     'Could not save source versions.' => 'Impossible d’enregistrer les versions de la source.',
-    'Version URL slug must look like v5 or v6.' => 'Le slug d’URL de version doit ressembler à v5 ou v6.',
+    'Version URL slug must look like v5, v6-beta, or v6-alpha.' => 'Le slug d’URL de version doit ressembler à v5, v6-beta ou v6-alpha.',
     'Git ref contains invalid characters.' => 'La ref Git contient des caractères non valides.',
     'Non-default versions require a URL slug.' => 'Les versions non par défaut nécessitent un slug d’URL.',
     'The default docs version must use the main ref.' => 'La version de documentation par défaut doit utiliser la ref main.',
     'The default docs version cannot have a URL slug.' => 'La version de documentation par défaut ne peut pas avoir de slug d’URL.',
     'The default docs version must be Latest.' => 'La version de documentation par défaut doit être Dernière.',
+    'Only the default docs version can be Latest.' => 'Seule la version de documentation par défaut peut être Dernière.',
 
     // Pages: Index
     'Search pages...' => 'Rechercher des pages...',

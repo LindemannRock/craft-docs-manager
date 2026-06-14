@@ -240,13 +240,17 @@ return [
     'Retired' => 'Avvecklad',
     'Never' => 'Aldrig',
     'Add version' => 'Lägg till version',
+    'Select a version branch...' => 'Välj en versionsgren...',
+    'No additional docs versions found.' => 'Inga ytterligare dokumentationsversioner hittades.',
+    'Remove docs version "{name}" from this source?' => 'Ta bort dokumentationsversionen "{name}" från denna källa?',
     'Could not save source versions.' => 'Källversioner kunde inte sparas.',
-    'Version URL slug must look like v5 or v6.' => 'Versions-URL-sluggen måste se ut som v5 eller v6.',
+    'Version URL slug must look like v5, v6-beta, or v6-alpha.' => 'Versions-URL-sluggen måste se ut som v5, v6-beta eller v6-alpha.',
     'Git ref contains invalid characters.' => 'Git-ref innehåller ogiltiga tecken.',
     'Non-default versions require a URL slug.' => 'Icke-standardversioner kräver en URL-slugg.',
     'The default docs version must use the main ref.' => 'Standardversionen av dokumentationen måste använda main-ref.',
     'The default docs version cannot have a URL slug.' => 'Standardversionen av dokumentationen får inte ha en URL-slugg.',
     'The default docs version must be Latest.' => 'Standardversionen av dokumentationen måste vara Senaste.',
+    'Only the default docs version can be Latest.' => 'Endast standardversionen av dokumentationen kan vara Senaste.',
 
     // Pages: Index
     'Search pages...' => 'Sök efter sidor...',

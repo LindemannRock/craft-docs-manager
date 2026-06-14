@@ -240,13 +240,17 @@ return [
     'Retired' => 'متقاعد',
     'Never' => 'أبداً',
     'Add version' => 'إضافة إصدار',
+    'Select a version branch...' => 'حدد فرع إصدار...',
+    'No additional docs versions found.' => 'لم يتم العثور على إصدارات وثائق إضافية.',
+    'Remove docs version "{name}" from this source?' => 'هل تريد إزالة إصدار التوثيق "{name}" من هذا المصدر؟',
     'Could not save source versions.' => 'تعذر حفظ إصدارات المصدر.',
-    'Version URL slug must look like v5 or v6.' => 'يجب أن يبدو جزء URL للإصدار مثل v5 أو v6.',
+    'Version URL slug must look like v5, v6-beta, or v6-alpha.' => 'يجب أن يكون جزء URL للإصدار مثل v5 أو v6-beta أو v6-alpha.',
     'Git ref contains invalid characters.' => 'يحتوي مرجع Git على أحرف غير صالحة.',
     'Non-default versions require a URL slug.' => 'تتطلب الإصدارات غير الافتراضية جزء URL.',
     'The default docs version must use the main ref.' => 'يجب أن يستخدم إصدار الوثائق الافتراضي مرجع main.',
     'The default docs version cannot have a URL slug.' => 'لا يمكن أن يحتوي إصدار الوثائق الافتراضي على جزء URL.',
     'The default docs version must be Latest.' => 'يجب أن يكون إصدار الوثائق الافتراضي هو الأحدث.',
+    'Only the default docs version can be Latest.' => 'يمكن أن يكون إصدار الوثائق الافتراضي فقط هو الأحدث.',
 
     // Pages: Index
     'Search pages...' => 'بحث في الصفحات...',

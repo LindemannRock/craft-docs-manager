@@ -240,13 +240,17 @@ return [
     'Retired' => 'Uitgefaseerd',
     'Never' => 'Nooit',
     'Add version' => 'Versie toevoegen',
+    'Select a version branch...' => 'Selecteer een versietak...',
+    'No additional docs versions found.' => 'Geen aanvullende documentatieversies gevonden.',
+    'Remove docs version "{name}" from this source?' => 'Documentatieversie "{name}" uit deze bron verwijderen?',
     'Could not save source versions.' => 'Bronversies konden niet worden opgeslagen.',
-    'Version URL slug must look like v5 or v6.' => 'De versie-URL-slug moet eruitzien als v5 of v6.',
+    'Version URL slug must look like v5, v6-beta, or v6-alpha.' => 'De versie-URL-slug moet eruitzien als v5, v6-beta of v6-alpha.',
     'Git ref contains invalid characters.' => 'De Git-ref bevat ongeldige tekens.',
     'Non-default versions require a URL slug.' => 'Niet-standaardversies vereisen een URL-slug.',
     'The default docs version must use the main ref.' => 'De standaard documentatieversie moet de main-ref gebruiken.',
     'The default docs version cannot have a URL slug.' => 'De standaard documentatieversie mag geen URL-slug hebben.',
     'The default docs version must be Latest.' => 'De standaard documentatieversie moet Nieuwste zijn.',
+    'Only the default docs version can be Latest.' => 'Alleen de standaard documentatieversie kan Nieuwste zijn.',
 
     // Pages: Index
     'Search pages...' => 'Pagina\'s zoeken...',
