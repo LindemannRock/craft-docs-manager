@@ -14,6 +14,7 @@ use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\elements\SourceDoc;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
+use lindemannrock\docsmanager\records\SourceVersionRecord;
 
 /**
  * Docs Manager Variable
@@ -131,15 +132,17 @@ class DocsManagerVariable
      * @param string|null $category Optional category filter
      * @return SourceDoc[]
      */
-    public function getPages(string $handle, ?string $category = null): array
+    public function getPages(string $handle, ?string $category = null, ?string $version = null): array
     {
         $source = $this->getSource($handle);
         if (!$source) {
             return [];
         }
 
+        $version = $this->normalizeVersionSlug($version);
         $query = SourceDoc::find()
             ->sourceId($source['id'])
+            ->version($version)
             ->status(null);
 
         if ($category) {
@@ -182,7 +185,7 @@ class DocsManagerVariable
      * @param string $slug Page slug
      * @return SourceDoc|null
      */
-    public function getPage(string $handle, string $slug): ?SourceDoc
+    public function getPage(string $handle, string $slug, ?string $version = null): ?SourceDoc
     {
         $source = $this->getSource($handle);
         if (!$source) {
@@ -191,6 +194,7 @@ class DocsManagerVariable
 
         return SourceDoc::find()
             ->sourceId($source['id'])
+            ->version($this->normalizeVersionSlug($version))
             ->slug($slug)
             ->status(null)
             ->one();
@@ -204,9 +208,14 @@ class DocsManagerVariable
      * @param string $handle Source handle
      * @return array|null
      */
-    public function getNavigation(string $handle): ?array
+    public function getNavigation(string $handle, ?string $version = null): ?array
     {
         $source = $this->getSource($handle);
+        $version = $this->normalizeVersionSlug($version);
+
+        if ($version !== '') {
+            return $this->buildNavigationFromPages($handle, $version);
+        }
 
         if ($source && !empty($source['localPath'])) {
             $basePath = LocalSourcePathHelper::resolve($source['localPath']);
@@ -217,14 +226,14 @@ class DocsManagerVariable
         $sidebarPath = $basePath . '/docs/.sidebar.json';
 
         if (!file_exists($sidebarPath)) {
-            return null;
+            return $this->buildNavigationFromPages($handle, $version);
         }
 
         $content = file_get_contents($sidebarPath);
         $sidebarData = json_decode($content, true);
 
         if (!$sidebarData) {
-            return null;
+            return $this->buildNavigationFromPages($handle, $version);
         }
 
         // Get pages from database to enrich with metadata
@@ -276,6 +285,108 @@ class DocsManagerVariable
         return $navigation;
     }
 
+    /**
+     * Get configured docs versions for a source.
+     *
+     * @param string $handle Source handle
+     * @return SourceVersionRecord[]
+     * @since 5.2.0
+     */
+    public function getVersions(string $handle): array
+    {
+        $source = $this->getSource($handle);
+        if (!$source) {
+            return [];
+        }
+
+        /** @var SourceVersionRecord[] $versions */
+        $versions = SourceVersionRecord::find()
+            ->where(['sourceId' => $source['id']])
+            ->orderBy(['sortOrder' => SORT_ASC, 'id' => SORT_ASC])
+            ->all();
+
+        return $versions;
+    }
+
+    /**
+     * Get the configured docs version for the current URL context.
+     *
+     * @since 5.2.0
+     */
+    public function getVersion(string $handle, ?string $version = null): ?SourceVersionRecord
+    {
+        $source = $this->getSource($handle);
+        if (!$source) {
+            return null;
+        }
+
+        $version = $this->normalizeVersionSlug($version);
+        $criteria = ['sourceId' => $source['id']];
+
+        if ($version === '') {
+            $criteria['isDefault'] = true;
+        } else {
+            $criteria['slug'] = $version;
+        }
+
+        return SourceVersionRecord::findOne($criteria);
+    }
+
+    /**
+     * Build a docs URL for a source/version/page tuple.
+     *
+     * @since 5.2.0
+     */
+    public function getDocUrl(string $handle, string $slug, ?string $version = null): string
+    {
+        $version = $this->normalizeVersionSlug($version);
+        $versionSegment = $version !== '' ? $version . '/' : '';
+
+        return '/plugins/' . $handle . '/docs/' . $versionSegment . $slug;
+    }
+
+    private function buildNavigationFromPages(string $handle, ?string $version = null): ?array
+    {
+        $pages = $this->getPages($handle, null, $version);
+        if ($pages === []) {
+            return null;
+        }
+
+        $navigation = [];
+        $order = 0;
+
+        foreach ($pages as $page) {
+            $categoryKey = $page->category ?: 'docs';
+            if (!isset($navigation[$categoryKey])) {
+                $order++;
+                $navigation[$categoryKey] = [
+                    'label' => $this->slugToTitle($categoryKey),
+                    'order' => $order,
+                    'collapsable' => true,
+                    'open' => true,
+                    'pages' => [],
+                ];
+            }
+
+            $navigation[$categoryKey]['pages'][] = [
+                'slug' => $page->slug,
+                'title' => $page->title ?? $this->slugToTitle(basename((string) $page->slug)),
+                'description' => $page->description ?? '',
+            ];
+        }
+
+        return $navigation;
+    }
+
+    private function normalizeVersionSlug(?string $version): string
+    {
+        if ($version === null || trim($version) === '') {
+            return '';
+        }
+
+        return SlugHandleHelper::normalizePathSlug($version, '');
+    }
+
     private function titleToSlug(string $title): string
     {
         return SlugHandleHelper::normalizeSlug($title, '');
@@ -306,9 +417,9 @@ class DocsManagerVariable
      * @param string $currentSlug Current page slug
      * @return array{prev: SourceDoc|null, next: SourceDoc|null}
      */
-    public function getPrevNextPages(string $handle, string $currentSlug): array
+    public function getPrevNextPages(string $handle, string $currentSlug, ?string $version = null): array
     {
-        $allPages = $this->getPages($handle);
+        $allPages = $this->getPages($handle, null, $version);
         $currentIndex = null;
 
         foreach ($allPages as $idx => $page) {
