@@ -43,17 +43,18 @@ The default version is always `main`, uses the unversioned docs URL, and is labe
 /plugins/{handle}/docs/get-started/installation
 ```
 
-Pinned versions sync from non-main Git refs and use a constrained `vN` URL segment:
+Pinned versions sync from non-main Git refs and use a constrained `vN`, `vN-beta`, or `vN-alpha` URL segment:
 
 ```text
 /plugins/{handle}/docs/v5/get-started/installation
 /plugins/{handle}/docs/v4/get-started/installation
+/plugins/{handle}/docs/v6-beta/get-started/installation
 ```
 
-Use pinned versions for frozen maintenance branches such as `craft-5` or `craft-4`. The version row stores the display label (`5.x`), URL slug (`v5`), Git ref (`craft-5`), status (`stable`, `beta`, `alpha`, or `retired`), sync time, and last sync error.
+Use pinned versions for frozen maintenance branches such as `craft-5` or `craft-4`, and prerelease docs branches such as `craft-6-beta`. The version row stores the display label (`5.x`), URL slug (`v5` or `v6-beta`), Git ref (`craft-5`), retired flag, sync time, and last sync error. Latest, beta, and alpha labels are derived from the default row and version/ref naming.
 
 > [!NOTE]
-> `main` is always the default docs ref. Alpha or beta docs should use a non-main ref with a versioned URL such as `/docs/v7/...`.
+> `main` is always the default docs ref. Alpha or beta docs should use a non-main ref with a versioned URL such as `/docs/v7-beta/...`.
 
 ## Documentation Structure
 

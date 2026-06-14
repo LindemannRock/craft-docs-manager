@@ -202,7 +202,7 @@ Get configured docs versions for a source.
 ```twig
 {% set versions = craft.docsManager.getVersions('search-manager') %}
 {% for version in versions %}
-    {{ version.label }} — {{ version.status }}
+    {{ version.label }} — {{ version.displayStatus }}
 {% endfor %}
 ```
 
