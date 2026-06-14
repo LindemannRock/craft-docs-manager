@@ -103,7 +103,7 @@ class ImagesController extends Controller
 
     private function serveVersionedImage(string $handle, string $version, string $path): Response
     {
-        if (!preg_match('/^v\d+$/', $version)) {
+        if (!preg_match('/^v\d+(?:-(?:alpha|beta))?$/', $version)) {
             throw new NotFoundHttpException();
         }
 
@@ -173,6 +173,7 @@ class ImagesController extends Controller
 
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
         $response = Craft::$app->getResponse();
+        $response->format = Response::FORMAT_RAW;
         $response->getHeaders()->set('Content-Type', self::ALLOWED_EXTENSIONS[$ext]);
         $response->getHeaders()->set('Cache-Control', 'public, max-age=86400');
         $response->content = $content;

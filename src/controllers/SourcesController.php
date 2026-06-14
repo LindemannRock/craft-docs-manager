@@ -14,6 +14,8 @@ use craft\helpers\App;
 use craft\web\Controller;
 use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
+use lindemannrock\docsmanager\elements\PluginPage;
+use lindemannrock\docsmanager\elements\SourceDoc;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
 use lindemannrock\docsmanager\records\SourceVersionRecord;
@@ -231,9 +233,12 @@ class SourcesController extends Controller
             }
         }
 
+        $sourceVersions ??= $this->getSourceVersions($source);
+
         return $this->renderTemplate('docs-manager/sources/edit', [
             'source' => $source,
-            'sourceVersions' => $sourceVersions ?? $this->getSourceVersions($source),
+            'sourceVersions' => $sourceVersions,
+            'sourceVersionCandidates' => $this->getSourceVersionCandidates($source, $sourceVersions),
             'versionStatusOptions' => $versionStatusOptions ?? SourceVersionRecord::statusOptions(),
             'isNew' => $isNew ?? !$sourceId,
         ]);
@@ -297,6 +302,7 @@ class SourcesController extends Controller
                 Craft::$app->getUrlManager()->setRouteParams([
                     'source' => $source,
                     'sourceVersions' => $this->getSourceVersions($source),
+                    'sourceVersionCandidates' => $this->getSourceVersionCandidates($source, $this->getSourceVersions($source)),
                     'versionStatusOptions' => SourceVersionRecord::statusOptions(),
                     'isNew' => false,
                 ]);
@@ -336,7 +342,7 @@ class SourcesController extends Controller
             ]);
         }
 
-        if ($source->delete()) {
+        if ($this->deleteSource($source)) {
             return $this->asJson([
                 'success' => true,
             ]);
@@ -693,9 +699,99 @@ class SourcesController extends Controller
         $this->requirePermission('docsManager:deleteSources');
         $sourceIds = Craft::$app->getRequest()->getBodyParam('sourceIds', []);
 
-        $count = SourceRecord::deleteAll(['id' => $sourceIds]);
+        $count = 0;
+        foreach (SourceRecord::findAll(['id' => $sourceIds]) as $source) {
+            if ($this->deleteSource($source)) {
+                $count++;
+            }
+        }
 
         return $this->asJson(['success' => true, 'count' => $count]);
+    }
+
+    private function deleteSource(SourceRecord $source): bool
+    {
+        $transaction = Craft::$app->getDb()->beginTransaction();
+
+        try {
+            if (!$this->deleteSourceElements($source)) {
+                $transaction->rollBack();
+                return false;
+            }
+
+            if (!$source->delete()) {
+                $transaction->rollBack();
+                return false;
+            }
+
+            $transaction->commit();
+            return true;
+        } catch (\Throwable $e) {
+            $transaction->rollBack();
+            Craft::error('Failed to delete docs source: ' . $e->getMessage(), __METHOD__);
+
+            return false;
+        }
+    }
+
+    private function deleteSourceElements(SourceRecord $source): bool
+    {
+        $sourceId = (int) $source->id;
+
+        if (!$this->deleteElementsByIds(SourceDoc::class, $this->getSourceDocElementIds($sourceId))) {
+            return false;
+        }
+
+        return $this->deleteElementsByIds(PluginPage::class, $this->getPluginPageElementIds($sourceId));
+    }
+
+    /**
+     * @param class-string<\craft\base\Element> $elementClass
+     * @param int[] $elementIds
+     */
+    private function deleteElementsByIds(string $elementClass, array $elementIds): bool
+    {
+        if ($elementIds === []) {
+            return true;
+        }
+
+        foreach ($elementClass::find()->id($elementIds)->status(null)->all() as $element) {
+            if (!Craft::$app->getElements()->deleteElement($element, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return int[]
+     */
+    private function getSourceDocElementIds(int $sourceId): array
+    {
+        return array_map(
+            'intval',
+            (new Query())
+                ->select('id')
+                ->from('{{%docsmanager_pages}}')
+                ->where(['sourceId' => $sourceId])
+                ->column()
+        );
+    }
+
+    /**
+     * @return int[]
+     */
+    private function getPluginPageElementIds(int $sourceId): array
+    {
+        return array_map(
+            'intval',
+            (new Query())
+                ->select('id')
+                ->from('{{%docsmanager_custom_pages}}')
+                ->where(['sourceId' => $sourceId])
+                ->column()
+        );
     }
 
     /**
@@ -772,8 +868,10 @@ class SourcesController extends Controller
             $version->label = (string) ($row['label'] ?? '');
             $version->slug = (string) ($row['slug'] ?? '') ?: null;
             $version->ref = (string) ($row['ref'] ?? 'main');
-            $version->status = (string) ($row['status'] ?? SourceVersionRecord::STATUS_STABLE);
             $version->isDefault = !empty($row['isDefault']);
+            $version->status = $version->isDefault
+                ? SourceVersionRecord::STATUS_LATEST
+                : (!empty($row['retired']) ? SourceVersionRecord::STATUS_RETIRED : SourceVersionRecord::STATUS_STABLE);
             $version->sortOrder = (int) ($row['sortOrder'] ?? $index);
 
             if (!$version->save()) {
@@ -787,6 +885,319 @@ class SourcesController extends Controller
             $this->ensureDefaultVersion($source);
         }
 
+        if (!$hadError) {
+            $this->normalizeSourceVersionSortOrder($source);
+        }
+
         return !$hadError && $seenIds !== [];
+    }
+
+    private function normalizeSourceVersionSortOrder(SourceRecord $source): void
+    {
+        $versions = $this->getSourceVersions($source);
+        usort($versions, fn(SourceVersionRecord $a, SourceVersionRecord $b): int => $this->compareSourceVersions($a, $b));
+
+        foreach ($versions as $index => $version) {
+            if ((int) $version->sortOrder === $index) {
+                continue;
+            }
+
+            $version->sortOrder = $index;
+            $version->save(false);
+        }
+    }
+
+    private function compareSourceVersions(SourceVersionRecord $a, SourceVersionRecord $b): int
+    {
+        if ((bool) $a->isDefault !== (bool) $b->isDefault) {
+            return (bool) $a->isDefault ? -1 : 1;
+        }
+
+        $aMajor = $this->extractVersionMajor($a->slug ?: $a->label) ?? 0;
+        $bMajor = $this->extractVersionMajor($b->slug ?: $b->label) ?? 0;
+        if ($aMajor !== $bMajor) {
+            return $bMajor <=> $aMajor;
+        }
+
+        $aPhase = $this->versionPhaseRank($a->slug ?: $a->label);
+        $bPhase = $this->versionPhaseRank($b->slug ?: $b->label);
+        if ($aPhase !== $bPhase) {
+            return $aPhase <=> $bPhase;
+        }
+
+        return (int) $a->id <=> (int) $b->id;
+    }
+
+    private function versionPhaseRank(?string $value): int
+    {
+        $value = strtolower((string) $value);
+
+        if (str_contains($value, 'beta')) {
+            return 1;
+        }
+
+        if (str_contains($value, 'alpha')) {
+            return 2;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param SourceVersionRecord[] $versions
+     * @return array<int, array{label: string, slug: string, ref: string}>
+     */
+    private function getSourceVersionCandidates(SourceRecord $source, array $versions): array
+    {
+        if (!$source->id) {
+            return [];
+        }
+
+        $existingRefs = [];
+        $existingSlugs = [];
+        $defaultMajor = null;
+
+        foreach ($versions as $version) {
+            $existingRefs[$version->ref] = true;
+
+            if ($version->slug) {
+                $existingSlugs[$version->slug] = true;
+            }
+
+            if ((bool) $version->isDefault) {
+                $defaultMajor = $this->extractVersionMajor($version->label);
+            }
+        }
+
+        $refs = $source->sourceType === 'github-api'
+            ? $this->getGithubDocsRefs($source)
+            : $this->getLocalDocsRefs($source);
+
+        $candidates = [];
+        foreach ($refs as $ref) {
+            if (isset($existingRefs[$ref]) || $ref === 'main') {
+                continue;
+            }
+
+            $candidate = $this->buildVersionCandidate($ref);
+            if ($candidate === null || isset($existingSlugs[$candidate['slug']])) {
+                continue;
+            }
+
+            $candidateMajor = $this->extractVersionMajor($candidate['label']);
+            $isPrerelease = str_contains($candidate['slug'], '-alpha') || str_contains($candidate['slug'], '-beta');
+            if (!$isPrerelease && $defaultMajor !== null && $candidateMajor === $defaultMajor) {
+                continue;
+            }
+
+            $candidates[$candidate['slug']] = $candidate;
+        }
+
+        foreach ($this->getSyncedVersionSlugs($source) as $slug) {
+            if (isset($existingSlugs[$slug]) || isset($candidates[$slug])) {
+                continue;
+            }
+
+            $candidate = $this->buildVersionCandidate($slug);
+            if ($candidate === null) {
+                continue;
+            }
+
+            $candidateMajor = $this->extractVersionMajor($candidate['label']);
+            $isPrerelease = str_contains($candidate['slug'], '-alpha') || str_contains($candidate['slug'], '-beta');
+            if (!$isPrerelease && $defaultMajor !== null && $candidateMajor === $defaultMajor) {
+                continue;
+            }
+
+            $matchingRef = $this->findRefForCandidateSlug($slug, $refs);
+            if ($matchingRef === null || isset($existingRefs[$matchingRef])) {
+                continue;
+            }
+
+            $candidate['ref'] = $matchingRef;
+            $candidates[$slug] = $candidate;
+        }
+
+        uasort($candidates, function(array $a, array $b): int {
+            $aMajor = $this->extractVersionMajor($a['label']) ?? 0;
+            $bMajor = $this->extractVersionMajor($b['label']) ?? 0;
+
+            if ($aMajor !== $bMajor) {
+                return $bMajor <=> $aMajor;
+            }
+
+            $aPhase = $this->versionPhaseRank($a['slug']);
+            $bPhase = $this->versionPhaseRank($b['slug']);
+            if ($aPhase !== $bPhase) {
+                return $aPhase <=> $bPhase;
+            }
+
+            return strcmp($a['slug'], $b['slug']);
+        });
+
+        return array_values($candidates);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getSyncedVersionSlugs(SourceRecord $source): array
+    {
+        return array_filter(array_map(
+            'strval',
+            (new Query())
+                ->select('version')
+                ->distinct()
+                ->from('{{%docsmanager_pages}}')
+                ->where(['sourceId' => $source->id])
+                ->andWhere(['not', ['version' => '']])
+                ->column()
+        ));
+    }
+
+    /**
+     * @param string[] $refs
+     */
+    private function findRefForCandidateSlug(string $slug, array $refs): ?string
+    {
+        foreach ($refs as $ref) {
+            $candidate = $this->buildVersionCandidate($ref);
+            if ($candidate !== null && $candidate['slug'] === $slug) {
+                return $ref;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getLocalDocsRefs(SourceRecord $source): array
+    {
+        $path = $source->localPath
+            ? LocalSourcePathHelper::resolve($source->localPath)
+            : LocalSourcePathHelper::join('@root/plugins', $source->handle);
+
+        $isRepoCommand = 'git -C ' . escapeshellarg($path) . ' rev-parse --is-inside-work-tree 2>/dev/null';
+        exec($isRepoCommand, $isRepoOutput, $isRepoExitCode);
+
+        if ($isRepoExitCode !== 0) {
+            return [];
+        }
+
+        $command = 'git -C ' . escapeshellarg($path) . ' for-each-ref ' . escapeshellarg('--format=%(refname:short)') . ' refs/heads refs/remotes/origin 2>/dev/null';
+        exec($command, $output, $exitCode);
+
+        if ($exitCode !== 0) {
+            return [];
+        }
+
+        $refs = [];
+        foreach ($output as $ref) {
+            $ref = preg_replace('/^origin\//', '', trim($ref));
+            if ($ref === '' || $ref === 'HEAD' || $ref === 'origin' || isset($refs[$ref])) {
+                continue;
+            }
+
+            $checkCommand = 'git -C ' . escapeshellarg($path) . ' cat-file -e ' . escapeshellarg($ref . ':docs/.sidebar.json') . ' 2>/dev/null';
+            exec($checkCommand, $checkOutput, $checkExitCode);
+            if ($checkExitCode === 0) {
+                $refs[$ref] = $ref;
+            }
+        }
+
+        return array_values($refs);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getGithubDocsRefs(SourceRecord $source): array
+    {
+        $token = DocsManager::getInstance()->getSettings()->githubToken;
+        $token = $token ? App::env($token) : null;
+
+        if (!$token || !$source->repositoryUrl || !preg_match('#github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$#', $source->repositoryUrl, $matches)) {
+            return [];
+        }
+
+        $owner = $matches[1];
+        $repo = $matches[2];
+        $branches = $this->requestGithubJson("https://api.github.com/repos/{$owner}/{$repo}/branches?per_page=100", $token);
+
+        if (!is_array($branches)) {
+            return [];
+        }
+
+        $refs = [];
+        foreach ($branches as $branch) {
+            $ref = (string) ($branch['name'] ?? '');
+            if ($ref === '') {
+                continue;
+            }
+
+            $sidebar = $this->requestGithubJson("https://api.github.com/repos/{$owner}/{$repo}/contents/docs/.sidebar.json?ref=" . rawurlencode($ref), $token);
+            if (is_array($sidebar) && isset($sidebar['path'])) {
+                $refs[] = $ref;
+            }
+        }
+
+        return $refs;
+    }
+
+    private function requestGithubJson(string $url, string $token): mixed
+    {
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'User-Agent: CraftCMS-Docs-Manager',
+                'Accept: application/vnd.github.v3+json',
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !is_string($response)) {
+            return null;
+        }
+
+        return json_decode($response, true);
+    }
+
+    /**
+     * @return array{label: string, slug: string, ref: string}|null
+     */
+    private function buildVersionCandidate(string $ref): ?array
+    {
+        $normalized = SlugHandleHelper::normalizePathSlug($ref, '');
+        if (!preg_match('/(?:craft-|^v?)(\d+)(?:[-.](alpha|beta))?/i', $normalized, $matches)) {
+            return null;
+        }
+
+        $major = (int) $matches[1];
+        $phase = isset($matches[2]) ? strtolower($matches[2]) : null;
+        $slug = 'v' . $major . ($phase ? '-' . $phase : '');
+        $label = $major . '.x' . ($phase ? ' ' . ucfirst($phase) : '');
+
+        return [
+            'label' => $label,
+            'slug' => $slug,
+            'ref' => $ref,
+        ];
+    }
+
+    private function extractVersionMajor(?string $value): ?int
+    {
+        if ($value && preg_match('/\d+/', $value, $matches)) {
+            return (int) $matches[0];
+        }
+
+        return null;
     }
 }
