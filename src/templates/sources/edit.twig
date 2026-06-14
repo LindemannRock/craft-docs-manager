@@ -186,6 +186,87 @@
     <input type="hidden" id="repositoryUrl" name="source[repositoryUrl]" value="{{ source.repositoryUrl ?? '' }}">
     <input type="hidden" id="localPath" name="source[localPath]" value="{{ source.localPath ?? '' }}">
 
+    {% if source.id %}
+        <hr>
+        <h2>{{ "Docs Versions"|t('docs-manager') }}</h2>
+        <p class="light">{{ "Add pinned documentation versions that sync from non-main Git refs. The main ref is always the default docs URL."|t('docs-manager') }}</p>
+
+        <div class="tableview">
+            <table class="data fullwidth" id="docs-versions-table">
+                <thead>
+                    <tr>
+                        <th>{{ "Label"|t('docs-manager') }}</th>
+                        <th>{{ "URL Slug"|t('docs-manager') }}</th>
+                        <th>{{ "Git Ref"|t('docs-manager') }}</th>
+                        <th>{{ "Status"|t('docs-manager') }}</th>
+                        <th>{{ "Last Synced"|t('docs-manager') }}</th>
+                        <th>{{ "Delete"|t('docs-manager') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for version in sourceVersions %}
+                        {% set rowName = 'versions[' ~ loop.index0 ~ ']' %}
+                        <tr>
+                            <td>
+                                <input type="hidden" name="{{ rowName }}[id]" value="{{ version.id }}">
+                                <input type="hidden" name="{{ rowName }}[isDefault]" value="{{ version.isDefault ? '1' : '0' }}">
+                                <input class="text fullwidth" type="text" name="{{ rowName }}[label]" value="{{ version.label }}" {{ version.isDefault ? 'readonly' : '' }}>
+                                {% if version.hasErrors('label') %}<ul class="errors"><li>{{ version.getFirstError('label') }}</li></ul>{% endif %}
+                            </td>
+                            <td>
+                                <input class="text fullwidth" type="text" name="{{ rowName }}[slug]" value="{{ version.slug }}" placeholder="{{ version.isDefault ? 'default' : 'v5' }}" {{ version.isDefault ? 'readonly' : '' }}>
+                                {% if version.hasErrors('slug') %}<ul class="errors"><li>{{ version.getFirstError('slug') }}</li></ul>{% endif %}
+                            </td>
+                            <td>
+                                <input class="text fullwidth" type="text" name="{{ rowName }}[ref]" value="{{ version.ref }}" {{ version.isDefault ? 'readonly' : '' }}>
+                                {% if version.hasErrors('ref') %}<ul class="errors"><li>{{ version.getFirstError('ref') }}</li></ul>{% endif %}
+                            </td>
+                            <td>
+                                {% if version.isDefault %}
+                                    <input type="hidden" name="{{ rowName }}[status]" value="latest">
+                                    <span class="status green"></span>{{ "Latest"|t('docs-manager') }}
+                                {% else %}
+                                    <div class="select">
+                                        <select name="{{ rowName }}[status]">
+                                            {% for statusValue, statusLabel in versionStatusOptions %}
+                                                <option value="{{ statusValue }}" {{ version.status == statusValue ? 'selected' : '' }}>{{ statusLabel }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    {% if version.hasErrors('status') %}<ul class="errors"><li>{{ version.getFirstError('status') }}</li></ul>{% endif %}
+                                {% endif %}
+                                <input type="hidden" name="{{ rowName }}[sortOrder]" value="{{ loop.index0 }}">
+                            </td>
+                            <td>
+                                {% if version.lastSyncedAt %}
+                                    {{ version.lastSyncedAt|lrDatetime }}
+                                {% else %}
+                                    <span class="light">{{ "Never"|t('docs-manager') }}</span>
+                                {% endif %}
+                                {% if version.lastSyncStatus == 'error' and version.lastSyncError %}
+                                    <div class="error" style="margin-top: 4px;">{{ version.lastSyncError|nl2br }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if version.isDefault %}
+                                    <span class="light">-</span>
+                                {% else %}
+                                    <label>
+                                        <input type="checkbox" name="{{ rowName }}[delete]" value="1">
+                                    </label>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 12px;">
+            <button type="button" class="btn" id="add-docs-version-btn">{{ "Add version"|t('docs-manager') }}</button>
+        </div>
+    {% endif %}
+
     {# Custom Pages link (only for existing sources) #}
     {% if source.id and currentUser.can('docsManager:managePages') %}
         <hr>
@@ -329,6 +410,40 @@
                 Craft.cp.displayError('{{ "Failed to sync source"|t('docs-manager') }}');
             });
         });
+    {% endif %}
+
+    {% if source.id %}
+        let docsVersionIndex = {{ sourceVersions|length }};
+        const docsVersionsTable = document.querySelector('#docs-versions-table tbody');
+        const addDocsVersionBtn = document.getElementById('add-docs-version-btn');
+        if (docsVersionsTable && addDocsVersionBtn) {
+            addDocsVersionBtn.addEventListener('click', function() {
+                const rowName = `versions[${docsVersionIndex}]`;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <input class="text fullwidth" type="text" name="${rowName}[label]" value="" placeholder="5.x">
+                        <input type="hidden" name="${rowName}[isDefault]" value="0">
+                    </td>
+                    <td><input class="text fullwidth" type="text" name="${rowName}[slug]" value="" placeholder="v5"></td>
+                    <td><input class="text fullwidth" type="text" name="${rowName}[ref]" value="" placeholder="craft-5"></td>
+                    <td>
+                        <div class="select">
+                            <select name="${rowName}[status]">
+                                {% for statusValue, statusLabel in versionStatusOptions %}
+                                    <option value="{{ statusValue }}" {{ statusValue == 'stable' ? 'selected' : '' }}>{{ statusLabel }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="hidden" name="${rowName}[sortOrder]" value="${docsVersionIndex}">
+                    </td>
+                    <td><span class="light">{{ "Never"|t('docs-manager') }}</span></td>
+                    <td><label><input type="checkbox" name="${rowName}[delete]" value="1"></label></td>
+                `;
+                docsVersionsTable.appendChild(row);
+                docsVersionIndex++;
+            });
+        }
     {% endif %}
 
     {% if isNew %}
