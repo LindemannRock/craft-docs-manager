@@ -8,10 +8,12 @@
 
 namespace lindemannrock\docsmanager\variables;
 
+use lindemannrock\base\helpers\ColorHelper;
 use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\elements\SourceDoc;
+use lindemannrock\docsmanager\helpers\HeroImageHelper;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
 use lindemannrock\docsmanager\records\SourceVersionRecord;
@@ -105,6 +107,67 @@ class DocsManagerVariable
             ->where(['handle' => $handle, 'kind' => 'plugin'])
             ->asArray()
             ->one();
+    }
+
+    /**
+     * Get CSS custom properties for a plugin hero from the synced icon SVG.
+     *
+     * Mirrors the colour decisions used by the hero image generator: the icon
+     * accent drives the gradient, while the icon ink drives readable text and
+     * determines whether the gradient should land on a light or dark field.
+     *
+     * @since 5.2.0
+     */
+    public function getPluginHeroStyle(string $handle, string $style = HeroImageHelper::STYLE_LIGHTER): string
+    {
+        $plugin = $this->getPlugin($handle);
+        $iconSvg = is_array($plugin) ? ($plugin['iconSvg'] ?? null) : null;
+        $roles = ColorHelper::iconColorRoles(is_string($iconSvg) ? $iconSvg : null);
+
+        $accent = $roles !== null ? $roles['accent'] : HeroImageHelper::FALLBACK_COLOR;
+        $ink = $roles !== null ? $roles['ink'] : '#FFFFFF';
+
+        if (!in_array($style, HeroImageHelper::STYLES, true)) {
+            $style = HeroImageHelper::STYLE_LIGHTER;
+        }
+
+        $darkInk = ColorHelper::luminance($ink) < 128;
+        $dk = static fn(int $n): string => ColorHelper::mix($accent, '#000000', $n / 100);
+        $lt = static fn(int $n): string => ColorHelper::mix($accent, '#FFFFFF', $n / 100);
+
+        if ($darkInk) {
+            [$from, $to] = match ($style) {
+                HeroImageHelper::STYLE_PRIMARY, HeroImageHelper::STYLE_DIAGONAL => [$dk(62), $lt(8)],
+                HeroImageHelper::STYLE_DEEPER => [$dk(58), $dk(8)],
+                default => [$dk(45), $lt(8)],
+            };
+        } else {
+            [$from, $to] = match ($style) {
+                HeroImageHelper::STYLE_PRIMARY, HeroImageHelper::STYLE_DIAGONAL => [$dk(45), $dk(84)],
+                HeroImageHelper::STYLE_DEEPER => [$dk(55), $dk(90)],
+                default => [$dk(32), $dk(78)],
+            };
+        }
+
+        $shadow = ColorHelper::mix($accent, '#000000', 0.82);
+        $buttonText = $darkInk ? $to : $from;
+        $badgeBackground = $darkInk ? ColorHelper::withAlpha('#FFFFFF', 0.34) : ColorHelper::withAlpha($ink, 0.18);
+        $badgeBorder = $darkInk ? ColorHelper::withAlpha($ink, 0.10) : ColorHelper::withAlpha($ink, 0.22);
+
+        return implode(';', [
+            '--plugin-hero-accent:' . $accent,
+            '--plugin-hero-ink:' . $ink,
+            '--plugin-hero-ink-muted:' . ColorHelper::withAlpha($ink, 0.78),
+            '--plugin-hero-credit:' . ColorHelper::withAlpha($ink, 0.56),
+            '--plugin-hero-from:' . $from,
+            '--plugin-hero-to:' . $to,
+            '--plugin-hero-shadow:' . $shadow,
+            '--plugin-hero-button-text:' . $buttonText,
+            '--plugin-hero-soft-surface:' . ColorHelper::withAlpha($ink, $darkInk ? 0.08 : 0.16),
+            '--plugin-hero-badge-bg:' . $badgeBackground,
+            '--plugin-hero-badge-border:' . $badgeBorder,
+            '--plugin-hero-badge-text:' . $ink,
+        ]);
     }
 
     /**
