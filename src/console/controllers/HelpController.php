@@ -108,9 +108,9 @@ final class HelpController extends AbstractHelpController
                         [
                             'path' => 'hero/generate',
                             'summary' => 'Generate a README hero banner for a plugin.',
-                            'description' => 'Compose a 1280x360 hero.webp from the plugin icon colour, composer name and tagline, and the LindemannRock background mark. This is an authoring command — it requires the ImageMagick CLI and is never used at runtime.',
+                            'description' => 'Compose a 1280x360 hero.webp derived entirely from the plugin icon: a smooth gradient tinted by the icon accent colour, the title set in the icon glyph colour, an accent-tinted shadow, plus the composer name and tagline. This is an authoring command — it requires the ImageMagick CLI and is never used at runtime.',
                             'arguments' => '<plugin>',
-                            'usageOptions' => '[out] [--name=<name>] [--tagline=<text>]',
+                            'usageOptions' => '[out] [--name=<name>] [--tagline=<text>] [--style=<style>]',
                             'options' => [
                                 [
                                     'name' => '--name',
@@ -120,6 +120,10 @@ final class HelpController extends AbstractHelpController
                                     'name' => '--tagline',
                                     'description' => 'Override the tagline. Defaults to composer description trimmed at the first " - ".',
                                 ],
+                                [
+                                    'name' => '--style',
+                                    'description' => 'Gradient style: primary, lighter (default), deeper, or diagonal.',
+                                ],
                             ],
                             'examples' => [
                                 'docs-manager/hero/generate search-manager',
@@ -127,19 +131,23 @@ final class HelpController extends AbstractHelpController
                             ],
                             'notes' => [
                                 'Requires the ImageMagick CLI (magick) on PATH.',
-                                'The plugin must be installed/enabled so its icon can be read.',
+                                'The icon is read from disk, so the plugin does not need to be installed or enabled.',
                                 'Defaults to {plugin}/docs/images/hero.webp when no output path is given.',
                             ],
                         ],
                         [
                             'path' => 'hero/generate-all',
                             'summary' => 'Generate hero banners for all plugins with docs.',
-                            'description' => 'Generate banners for every installed plugin that has a docs folder and an icon. Existing banners are skipped unless --force is given.',
-                            'usageOptions' => '[--force]',
+                            'description' => 'Generate banners for every plugin or module on disk that has a docs folder and an icon. Existing banners are skipped unless --force is given.',
+                            'usageOptions' => '[--force] [--style=<style>]',
                             'options' => [
                                 [
                                     'name' => '--force',
                                     'description' => 'Overwrite banners that already exist.',
+                                ],
+                                [
+                                    'name' => '--style',
+                                    'description' => 'Gradient style: primary, lighter (default), deeper, or diagonal.',
                                 ],
                             ],
                             'examples' => [
@@ -178,6 +186,9 @@ final class HelpController extends AbstractHelpController
                             'examples' => [
                                 'docs-manager/sync/plugin search-manager',
                                 'docs-manager/sync/plugin base',
+                            ],
+                            'notes' => [
+                                'If no source is registered yet, a local source is created automatically on first sync when the handle resolves to a plugin/module directory (with a composer.json) under the configured Local Plugin Base Path. GitHub sources must be added in the CP.',
                             ],
                         ],
                         [

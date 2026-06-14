@@ -378,19 +378,46 @@ class SyncService extends Component
         }
 
         $plugin = SourceRecord::findOne(['handle' => $handle]);
-
-        if (!$plugin) {
-            // Try to auto-create from handle
-            $plugin = new SourceRecord();
-            $plugin->handle = $handle;
-            $plugin->name = $this->handleToName($handle);
-            $plugin->enabled = true;
-
-            if (!$plugin->save()) {
-                $this->logError('Failed to create plugin record', ['handle' => $handle]);
-                return null;
-            }
+        if ($plugin) {
+            return $plugin;
         }
+
+        // Auto-register a local source straight from settings — but ONLY when the
+        // handle resolves to a real plugin/module directory on disk (composer.json
+        // present), so a typo'd handle never spawns a junk source. GitHub sources
+        // must be onboarded in the CP; a repository URL can't be derived from a handle.
+        $settings = DocsManager::getInstance()->getSettings();
+        $basePath = (string) $settings->localPluginBasePath;
+        if ($settings->defaultSourceType !== 'local' || $basePath === '') {
+            return null;
+        }
+
+        $localPath = rtrim($basePath, '/\\') . '/' . $handle;
+        $resolved = LocalSourcePathHelper::resolve($localPath);
+        if (!is_dir($resolved) || !is_file($resolved . '/composer.json')) {
+            return null;
+        }
+
+        $plugin = new SourceRecord();
+        $plugin->handle = $handle;
+        $plugin->name = $this->handleToName($handle);
+        $plugin->kind = 'plugin';
+        $plugin->sourceType = 'local';
+        $plugin->localPath = $localPath;
+        $plugin->enabled = true;
+
+        if (!$plugin->save()) {
+            $this->logError('Failed to auto-create source record', [
+                'handle' => $handle,
+                'errors' => $plugin->getErrors(),
+            ]);
+            return null;
+        }
+
+        $this->logInfo('Auto-registered local docs source from handle', [
+            'handle' => $handle,
+            'localPath' => $localPath,
+        ]);
 
         return $plugin;
     }
