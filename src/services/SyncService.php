@@ -327,6 +327,24 @@ class SyncService extends Component
             ->one();
 
         if (!$page) {
+            // A soft-deleted page can still occupy the (sourceId, version, slug)
+            // unique slot. Restore and reuse it instead of inserting a duplicate
+            // (which would trip the unique index and abort the whole sync).
+            $trashed = SourceDoc::find()
+                ->sourceId($plugin->id)
+                ->version($this->pageVersionValue($version))
+                ->slug($slug)
+                ->status(null)
+                ->trashed(true)
+                ->one();
+
+            if ($trashed) {
+                Craft::$app->getElements()->restoreElement($trashed);
+                $page = $trashed;
+            }
+        }
+
+        if (!$page) {
             $page = new SourceDoc();
             $page->sourceId = $plugin->id;
             $page->version = $this->pageVersionValue($version);
@@ -415,8 +433,8 @@ class SyncService extends Component
 
         $paragraph = trim($paragraph);
 
-        if (strlen($paragraph) > 160) {
-            $paragraph = substr($paragraph, 0, 157) . '...';
+        if (mb_strlen($paragraph) > 160) {
+            $paragraph = mb_substr($paragraph, 0, 157) . '...';
         }
 
         return $paragraph ?: null;
