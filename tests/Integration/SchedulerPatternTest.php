@@ -11,6 +11,8 @@ declare(strict_types=1);
 namespace lindemannrock\docsmanager\tests\Integration;
 
 use Craft;
+use lindemannrock\base\helpers\DateFormatHelper;
+use lindemannrock\base\helpers\ScheduleHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\jobs\SyncAllPluginsJob;
 use lindemannrock\docsmanager\tests\TestCase;
@@ -70,6 +72,39 @@ final class SchedulerPatternTest extends TestCase
         $this->assertSame(1, $this->countQueueRows('SyncAllPluginsJob'));
     }
 
+    public function testBootstrapUsesCanonicalSyncSchedule(): void
+    {
+        $settings = DocsManager::$plugin->getSettings();
+        $settings->autoSync = true;
+        $settings->syncSchedule = 'daily';
+
+        $this->invokePrivate(DocsManager::$plugin, 'scheduleSyncJob');
+
+        $row = $this->latestQueueRow('SyncAllPluginsJob');
+
+        self::assertNotNull($row);
+        self::assertStringContainsString($this->expectedRunTime('daily'), (string) $row['description']);
+    }
+
+    public function testBootstrapCollapsesDuplicatePendingSyncRows(): void
+    {
+        $settings = DocsManager::$plugin->getSettings();
+        $settings->autoSync = true;
+        $settings->syncSchedule = 'hourly';
+
+        Craft::$app->getQueue()->delay(300)->push(new SyncAllPluginsJob([
+            'reschedule' => true,
+        ]));
+        Craft::$app->getQueue()->delay(300)->push(new SyncAllPluginsJob([
+            'reschedule' => true,
+        ]));
+        $this->assertSame(2, $this->countQueueRows('SyncAllPluginsJob'));
+
+        $this->invokePrivate(DocsManager::$plugin, 'scheduleSyncJob');
+
+        $this->assertSame(1, $this->countQueueRows('SyncAllPluginsJob'));
+    }
+
     public function testSyncScheduleOptionsUseBaseCuratedList(): void
     {
         $options = DocsManager::$plugin->getSettings()->getSyncScheduleOptions();
@@ -111,6 +146,34 @@ final class SchedulerPatternTest extends TestCase
             ->where(['like', 'job', 'docsmanager'])
             ->andWhere(['like', 'job', $jobClass])
             ->count();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function latestQueueRow(string $jobClass): ?array
+    {
+        $row = (new \craft\db\Query())
+            ->from('{{%queue}}')
+            ->where(['like', 'job', 'docsmanager'])
+            ->andWhere(['like', 'job', $jobClass])
+            ->orderBy(['id' => SORT_DESC])
+            ->one();
+
+        return is_array($row) ? $row : null;
+    }
+
+    private function expectedRunTime(string $schedule): string
+    {
+        $nextRun = ScheduleHelper::calculateNext($schedule);
+        self::assertNotNull($nextRun);
+
+        return DateFormatHelper::formatCompactDatetimeFromSettings(
+            $nextRun,
+            DocsManager::$plugin->getSettings(),
+            false,
+            false,
+        );
     }
 
     private function deleteDocsManagerQueueRows(): void

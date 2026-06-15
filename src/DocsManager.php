@@ -29,8 +29,11 @@ use lindemannrock\base\helpers\ColorHelper;
 use lindemannrock\base\helpers\CpNavHelper;
 use lindemannrock\base\helpers\DateFormatHelper;
 use lindemannrock\base\helpers\PluginHelper;
+use lindemannrock\base\helpers\RecurringQueueHelper;
+use lindemannrock\base\helpers\ScheduleHelper;
 use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\elements\SourceDoc;
+use lindemannrock\docsmanager\jobs\SyncAllPluginsJob;
 use lindemannrock\docsmanager\models\Settings;
 use lindemannrock\docsmanager\services\ChangelogService;
 use lindemannrock\docsmanager\services\CodeExtractorService;
@@ -461,28 +464,28 @@ class DocsManager extends BasePlugin
             return;
         }
 
-        $existingJob = $this->hasPendingSyncJob();
-
-        if (!$existingJob) {
-            $initialDelay = 5 * 60;
-            $initialRun = (clone DateFormatHelper::now())->modify("+{$initialDelay} seconds");
-            $job = new \lindemannrock\docsmanager\jobs\SyncAllPluginsJob([
-                'reschedule' => true,
-                'nextRunTime' => DateFormatHelper::formatCompactDatetimeFromSettings(
-                    $initialRun,
-                    $settings,
-                    false,
-                    false,
-                ),
-            ]);
-
-            Craft::$app->getQueue()->delay($initialDelay)->push($job);
-
-            $this->logInfo('Scheduled initial sync job', [
-                'delay' => '5 minutes',
-                'schedule' => $settings->syncSchedule,
-            ]);
+        $nextRun = ScheduleHelper::calculateNext($settings->syncSchedule);
+        if ($nextRun === null) {
+            return;
         }
+
+        $delay = max(0, $nextRun->getTimestamp() - DateFormatHelper::now()->getTimestamp());
+        $nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
+            $nextRun,
+            $settings,
+            false,
+            false,
+        );
+
+        RecurringQueueHelper::ensurePending(
+            pluginToken: 'docsmanager',
+            jobClass: SyncAllPluginsJob::class,
+            delay: $delay,
+            jobFactory: fn() => new SyncAllPluginsJob([
+                'reschedule' => true,
+                'nextRunTime' => $nextRunTime,
+            ]),
+        );
     }
 
     /**
@@ -515,26 +518,6 @@ class DocsManager extends BasePlugin
      */
     private function cancelScheduledSyncJobs(): void
     {
-        Craft::$app->getDb()->createCommand()
-            ->delete('{{%queue}}', [
-                'and',
-                ['like', 'job', 'docsmanager'],
-                ['like', 'job', 'SyncAllPluginsJob'],
-            ])
-            ->execute();
-    }
-
-    /**
-     * Check whether a pending automatic sync job is already queued.
-     */
-    private function hasPendingSyncJob(): bool
-    {
-        return (new \craft\db\Query())
-            ->from('{{%queue}}')
-            ->where(['like', 'job', 'docsmanager'])
-            ->andWhere(['like', 'job', 'SyncAllPluginsJob'])
-            ->andWhere(['fail' => false])
-            ->andWhere(['timeUpdated' => null])
-            ->exists();
+        RecurringQueueHelper::deletePending('docsmanager', SyncAllPluginsJob::class);
     }
 }
