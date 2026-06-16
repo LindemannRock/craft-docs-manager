@@ -473,8 +473,9 @@ class DocsManager extends BasePlugin
         $nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
             $nextRun,
             $settings,
+            null,
             false,
-            false,
+            pluginHandle: 'docs-manager',
         );
 
         RecurringQueueHelper::ensurePending(

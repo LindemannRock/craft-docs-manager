@@ -65,8 +65,9 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
                     $this->nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
                         $nextRun,
                         $settings,
+                        null,
                         false,
-                        false,
+                        pluginHandle: 'docs-manager',
                     );
                 }
             }
@@ -151,8 +152,9 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
             $nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
                 $nextRun,
                 $settings,
+                null,
                 false,
-                false,
+                pluginHandle: 'docs-manager',
             );
             // Create a new job for the next sync
             $job = new self([

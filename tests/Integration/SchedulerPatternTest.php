@@ -171,8 +171,9 @@ final class SchedulerPatternTest extends TestCase
         return DateFormatHelper::formatCompactDatetimeFromSettings(
             $nextRun,
             DocsManager::$plugin->getSettings(),
+            null,
             false,
-            false,
+            pluginHandle: 'docs-manager',
         );
     }
 
