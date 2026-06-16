@@ -74,6 +74,8 @@ return [
 
 Changing `syncSchedule` replaces the pending automatic sync queue row so the next run follows the newly selected schedule.
 
+Craft stores queue job descriptions when rows are queued, so date/time format changes apply to newly queued rows. Existing delayed rows keep their old label until they run or are requeued. Queue labels stay compact: numeric months render numerically, while short and long month settings both render as short month names.
+
 ## Orphan Page Cleanup
 
 When a page is removed from `.sidebar.json`, it becomes an orphan. On the next sync, Docs Manager automatically deletes orphaned pages from the database for that same source/version — any `SourceDoc` element whose slug no longer appears in that version's `.sidebar.json` is removed. This keeps the database in sync with the doc files on disk.

@@ -22,7 +22,9 @@ Docs Manager schedules one recurring queue job for automatic source sync. If the
 - Check that `autoSync` is enabled.
 - Check that `syncSchedule` is set to `hourly`, `daily`, `weekly`, or `monthly`.
 
-The queued job description shows when that specific queued row is due to run.
+The queued job description shows when that specific queued row is due to run. Craft stores that description when the row is queued, so date/time format changes apply to newly queued rows. Existing delayed rows keep their old label until they run or are requeued. Queue labels stay compact: numeric months render numerically, while short and long month settings both render as short month names.
+
+During bootstrap, Docs Manager collapses duplicate pending automatic-sync rows automatically and keeps one row for the next configured sync run. If duplicates keep returning after a deployment, confirm all web workers are running the same plugin version and old queue workers have been restarted.
 
 ## Settings Save Shows a Validation Error
 
