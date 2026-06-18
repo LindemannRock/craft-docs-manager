@@ -1,5 +1,35 @@
 # Changelog
 
+## [5.2.0](https://github.com/LindemannRock/craft-docs-manager/compare/v5.1.0...v5.2.0) - 2026-06-18
+
+
+### Added
+
+* add getPluginHeroStyle method for plugin hero CSS properties ([55e4c0a](https://github.com/LindemannRock/craft-docs-manager/commit/55e4c0a8d2ade8f686bd500a52ac79ac3346dc04))
+* add support for managing pinned documentation versions ([c92aaaa](https://github.com/LindemannRock/craft-docs-manager/commit/c92aaaa4e7191d3d494e6c040f3c6ade0ecf82ec))
+* add version handling for empty version and display status methods ([8b31aaf](https://github.com/LindemannRock/craft-docs-manager/commit/8b31aaf9a0b095f76636585b49650dab5e1fca80))
+* **cli:** add HeroController for generating README hero banners ([8af9909](https://github.com/LindemannRock/craft-docs-manager/commit/8af9909dd26b9a3506b10bb65979bd39f1ce8e16))
+* **cli:** add style option for hero image generation ([7f6750b](https://github.com/LindemannRock/craft-docs-manager/commit/7f6750b4af7a1bc133063331d61fee4b8b5eaf2c))
+* **controllers:** add versioned image serving in ImagesController ([e0b9fe3](https://github.com/LindemannRock/craft-docs-manager/commit/e0b9fe33739fafb7d3a6007840cadefb4b6c7878))
+* **controllers:** enhance image versioning and response handling ([06ba9f2](https://github.com/LindemannRock/craft-docs-manager/commit/06ba9f2f5591a6badbde06fec3115714370b4d76))
+* **hero:** add commands for generating README hero banners ([9496494](https://github.com/LindemannRock/craft-docs-manager/commit/9496494f11e177d3f3915c332fdfe6775609f611))
+* **i18n:** add documentation version management translations ([50d2941](https://github.com/LindemannRock/craft-docs-manager/commit/50d294175d358ca703b6e620fdd617a6e40ee3ba))
+* **i18n:** add new translation keys across multiple locales ([525b37f](https://github.com/LindemannRock/craft-docs-manager/commit/525b37ffeb6d5cca41965c5aac99e7f710abcde1))
+* **migrations:** add source versions table and update doc pages schema ([92f3288](https://github.com/LindemannRock/craft-docs-manager/commit/92f32880403ddbb9b17b10a0aad53a5f2e95470f))
+* **source-doc:** add versioning support for documentation URLs ([4fc7163](https://github.com/LindemannRock/craft-docs-manager/commit/4fc71631d624b8f51bd0fe0fb6c21dbd813de8a4))
+* **sync:** add icon mask SVG handling for synced sources ([215123e](https://github.com/LindemannRock/craft-docs-manager/commit/215123ed0cffec9b3472325020446d730111eb2c))
+* **sync:** auto-register local source for valid plugin directory ([44fe77a](https://github.com/LindemannRock/craft-docs-manager/commit/44fe77a13d703665ca25e87072cc5b6de7dee28b))
+* **sync:** restore soft-deleted pages during sync to prevent duplicates ([8550f12](https://github.com/LindemannRock/craft-docs-manager/commit/8550f123564e20da0774a76d516db655c2d0f97d))
+* **sync:** sync multiple plugin versions and update metadata handling ([104d989](https://github.com/LindemannRock/craft-docs-manager/commit/104d989617808f846d0c20c82891a3586eeb007a))
+* **tests:** add HeroImageGenerationTest for webp banner generation ([ddbdaf0](https://github.com/LindemannRock/craft-docs-manager/commit/ddbdaf078940e4e3f14b529f178aeaf3ec92e355))
+* **variable:** add versioning support for documentation retrieval ([ca28c0b](https://github.com/LindemannRock/craft-docs-manager/commit/ca28c0b6910ba18661ffce5e024e19c590356ae9))
+
+
+### Fixed
+
+* **i18n:** correct page type labels translations in edit and index templates ([4820f6c](https://github.com/LindemannRock/craft-docs-manager/commit/4820f6c287cd79fa8ec867e1bf90fb7616a7d644))
+* **i18n:** correct translations across multiple locales ([3cca8d3](https://github.com/LindemannRock/craft-docs-manager/commit/3cca8d35345b8e5463689920b68b4b352c8a96c1))
+
 ## [5.1.0](https://github.com/LindemannRock/craft-docs-manager/compare/v5.0.0...v5.1.0) - 2026-06-07
 
 
