@@ -265,7 +265,8 @@
 		bulkDisableFailed: {{ 'Failed to disable sources'|t('docs-manager')|json_encode|raw }},
 		bulkDeletedTemplate: {{ 'Deleted {count} sources'|t('docs-manager')|json_encode|raw }},
 		bulkDeleteFailed: {{ 'Failed to delete sources'|t('docs-manager')|json_encode|raw }},
-		bulkDeleteConfirmTemplate: {{ 'Delete {count} source(s)? This cannot be undone.'|t('docs-manager')|json_encode|raw }},
+		bulkDeleteConfirmSingular: {{ 'Delete {count} source? This cannot be undone.'|t('docs-manager')|json_encode|raw }},
+		bulkDeleteConfirmPlural: {{ 'Delete {count} sources? This cannot be undone.'|t('docs-manager')|json_encode|raw }},
 	};
 
 	function selectedIds() {
@@ -381,7 +382,8 @@
 	document.getElementById('lr-bulk-delete-btn')?.addEventListener('click', function() {
 		const ids = selectedIds();
 		if (!ids.length) return;
-		if (!confirm(T.bulkDeleteConfirmTemplate.replace('{count}', ids.length))) return;
+		const confirmTemplate = ids.length === 1 ? T.bulkDeleteConfirmSingular : T.bulkDeleteConfirmPlural;
+		if (!confirm(confirmTemplate.replace('{count}', ids.length))) return;
 		runBulkStatus('docs-manager/sources/bulk-delete', T.bulkDeletedTemplate, T.bulkDeleteFailed);
 	});
 
