@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.3.0](https://github.com/LindemannRock/craft-docs-manager/compare/v5.2.0...v5.3.0) (2026-06-20)
+
+
+### Added
+
+* **i18n:** correct translations for source and page deletion prompts ([5268a62](https://github.com/LindemannRock/craft-docs-manager/commit/5268a62c61ee6e40ed7b88b84ab4ca92b25e7f5b))
+
 ## [5.2.0](https://github.com/LindemannRock/craft-docs-manager/compare/v5.1.0...v5.2.0) - 2026-06-18
 
 
