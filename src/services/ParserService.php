@@ -369,34 +369,64 @@ class ParserService extends Component
     {
         $tabGroups = [];
 
-        // Match individual titled code fences: ```lang title="Title"\ncontent\n```
-        $pattern = '/```(\w+)\s+title="([^"]+)"\n(.*?)\n```/s';
+        $lines = explode("\n", $markdown);
+        $fences = [];
+        $lineCount = count($lines);
 
-        // Find all matches with positions
-        if (!preg_match_all($pattern, $markdown, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+        for ($i = 0; $i < $lineCount; $i++) {
+            if (!preg_match('/^(?<indent>[ \t]*)```(?<language>[A-Za-z0-9_-]+)\s+title="(?<title>[^"]+)"[^\n]*$/', $lines[$i], $matches)) {
+                continue;
+            }
+
+            for ($endLine = $i + 1; $endLine < $lineCount; $endLine++) {
+                if (!preg_match('/^[ \t]*```[ \t]*$/', $lines[$endLine])) {
+                    continue;
+                }
+
+                $contentLines = array_slice($lines, $i + 1, $endLine - $i - 1);
+                $contentLines = array_map(
+                    fn(string $line): string => $this->removeFenceIndent($line, $matches['indent']),
+                    $contentLines,
+                );
+
+                $fences[] = [
+                    'startLine' => $i,
+                    'endLine' => $endLine,
+                    'indent' => $matches['indent'],
+                    'language' => $matches['language'],
+                    'title' => $matches['title'],
+                    'content' => implode("\n", $contentLines),
+                ];
+
+                $i = $endLine;
+                break;
+            }
+        }
+
+        if ($fences === []) {
             return ['markdown' => $markdown, 'tabGroups' => []];
         }
 
-        // Group consecutive matches (only whitespace between them)
+        // Group consecutive matches at the same indentation level.
         $groups = [];
         $currentGroup = [];
 
-        foreach ($matches as $match) {
+        foreach ($fences as $fence) {
             if ($currentGroup === []) {
-                $currentGroup[] = $match;
+                $currentGroup[] = $fence;
             } else {
                 $prevMatch = $currentGroup[count($currentGroup) - 1];
-                $prevEnd = $prevMatch[0][1] + strlen($prevMatch[0][0]);
-                $thisStart = $match[0][1];
-                $between = substr($markdown, $prevEnd, $thisStart - $prevEnd);
 
-                if (trim($between) === '') {
-                    $currentGroup[] = $match;
+                if (
+                    $prevMatch['indent'] === $fence['indent']
+                    && $this->onlyWhitespaceLines($lines, $prevMatch['endLine'] + 1, $fence['startLine'] - 1)
+                ) {
+                    $currentGroup[] = $fence;
                 } else {
                     if (count($currentGroup) >= 2) {
                         $groups[] = $currentGroup;
                     }
-                    $currentGroup = [$match];
+                    $currentGroup = [$fence];
                 }
             }
         }
@@ -412,23 +442,52 @@ class ParserService extends Component
         foreach (array_reverse($groups) as $group) {
             $id = 'CODETABGROUP' . count($tabGroups);
             $tabs = [];
-            foreach ($group as $match) {
+            foreach ($group as $fence) {
                 $tabs[] = [
-                    'language' => $match[1][0],
-                    'title' => $match[2][0],
-                    'content' => $match[3][0],
+                    'language' => $fence['language'],
+                    'title' => $fence['title'],
+                    'content' => $fence['content'],
                 ];
             }
             $tabGroups[$id] = $tabs;
 
-            $start = $group[0][0][1];
+            $replacement = $group[0]['indent'] . $id;
+            $start = $group[0]['startLine'];
             $lastMatch = $group[count($group) - 1];
-            $end = $lastMatch[0][1] + strlen($lastMatch[0][0]);
+            $length = $lastMatch['endLine'] - $start + 1;
 
-            $markdown = substr_replace($markdown, "\n\n" . $id . "\n\n", $start, $end - $start);
+            array_splice($lines, $start, $length, [$replacement]);
         }
 
-        return ['markdown' => $markdown, 'tabGroups' => $tabGroups];
+        return ['markdown' => implode("\n", $lines), 'tabGroups' => $tabGroups];
+    }
+
+    /**
+     * Remove the fence's list/container indentation from extracted code lines.
+     */
+    private function removeFenceIndent(string $line, string $indent): string
+    {
+        if ($indent !== '' && str_starts_with($line, $indent)) {
+            return substr($line, strlen($indent));
+        }
+
+        return $line;
+    }
+
+    /**
+     * Check whether a range contains only blank/whitespace lines.
+     *
+     * @param array<int, string> $lines
+     */
+    private function onlyWhitespaceLines(array $lines, int $startLine, int $endLine): bool
+    {
+        for ($i = $startLine; $i <= $endLine; $i++) {
+            if (trim($lines[$i] ?? '') !== '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -443,7 +502,8 @@ class ParserService extends Component
         foreach ($tabGroups as $id => $tabs) {
             $tabHtml = $this->renderCodeTabs($tabs);
             // CommonMark wraps the token in a <p> tag
-            $html = str_replace("<p>{$id}</p>", $tabHtml, $html);
+            $html = preg_replace('/<p>\s*' . preg_quote($id, '/') . '\s*<\/p>/', $tabHtml, $html);
+            $html = str_replace($id, $tabHtml, $html);
         }
 
         return $html;
