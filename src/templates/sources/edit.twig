@@ -302,7 +302,7 @@
                         value: source.kind,
                         colorSet: 'sourceKind',
                     } only %}
-                    <span>{{ source.kind|capitalize }}</span>
+                    <span>{{ source.kind == 'plugin' ? 'Plugin'|t('docs-manager') : (source.kind == 'theme' ? 'Theme'|t('docs-manager') : source.kind|capitalize) }}</span>
                 </dd>
             </div>
             <div class="data">

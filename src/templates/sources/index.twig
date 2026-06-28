@@ -145,7 +145,7 @@
 	{# Doc Type #}
 	<td data-column="kind">
 		{% include 'lindemannrock-base/_components/badge' with {
-			label: item.kind|capitalize,
+			label: item.kind == 'plugin' ? 'Plugin'|t('docs-manager') : (item.kind == 'theme' ? 'Theme'|t('docs-manager') : item.kind|capitalize),
 			value: item.kind,
 			colorSet: 'sourceKind',
 		} only %}
