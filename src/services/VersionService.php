@@ -109,36 +109,69 @@ class VersionService extends Component
      */
     public function getPackagistVersion(string $handle): ?array
     {
-        $url = "https://packagist.org/packages/lindemannrock/craft-{$handle}.json";
+        $packageName = "lindemannrock/craft-{$handle}";
+        $url = "https://repo.packagist.org/p2/{$packageName}.json";
 
         try {
             $response = $this->fetchJson($url);
 
-            if ($response && isset($response['package']['versions'])) {
-                $versions = array_keys($response['package']['versions']);
+            if ($response && isset($response['packages'][$packageName])) {
+                return $this->extractLatestPackagistVersion($response['packages'][$packageName]);
+            }
 
-                // Filter out dev versions and get latest stable
-                $stableVersions = array_filter($versions, function($version) {
-                    return !str_contains($version, 'dev') && preg_match('/^\d+\.\d+/', $version);
-                });
+            // Fallback for environments where the Composer v2 metadata endpoint is unavailable.
+            $legacyUrl = "https://packagist.org/packages/{$packageName}.json";
+            $legacyResponse = $this->fetchJson($legacyUrl);
 
-                if (!empty($stableVersions)) {
-                    // Sort versions
-                    usort($stableVersions, 'version_compare');
-                    $latestVersion = end($stableVersions);
-
-                    return [
-                        'version' => ltrim($latestVersion, 'v'),
-                        'releaseDate' => null, // Packagist doesn't provide release dates easily
-                        'source' => 'packagist',
-                    ];
+            if ($legacyResponse && isset($legacyResponse['package']['versions'])) {
+                $versions = [];
+                foreach ($legacyResponse['package']['versions'] as $version => $metadata) {
+                    $versions[] = ['version' => $version, 'time' => $metadata['time'] ?? null];
                 }
+
+                return $this->extractLatestPackagistVersion($versions);
             }
         } catch (\Exception $e) {
             $this->logWarning('Packagist API failed', ['handle' => $handle, 'error' => $e->getMessage()]);
         }
 
         return null;
+    }
+
+    /**
+     * Extract latest stable version from Packagist package metadata.
+     *
+     * @param array<int, array<string, mixed>> $versions
+     * @return array|null ['version' => '1.2.3', 'releaseDate' => null, 'source' => 'packagist']
+     */
+    private function extractLatestPackagistVersion(array $versions): ?array
+    {
+        $stableVersions = [];
+
+        foreach ($versions as $metadata) {
+            $version = (string)($metadata['version'] ?? '');
+            if ($version === '' || str_contains($version, 'dev') || !preg_match('/^v?\d+\.\d+/', $version)) {
+                continue;
+            }
+
+            $stableVersions[] = [
+                'version' => ltrim($version, 'v'),
+                'time' => $metadata['time'] ?? null,
+            ];
+        }
+
+        if ($stableVersions === []) {
+            return null;
+        }
+
+        usort($stableVersions, fn(array $a, array $b): int => version_compare($a['version'], $b['version']));
+        $latest = end($stableVersions);
+
+        return [
+            'version' => $latest['version'],
+            'releaseDate' => $latest['time'],
+            'source' => 'packagist',
+        ];
     }
 
     /**
