@@ -175,7 +175,15 @@ class SyncService extends Component
                         $this->syncPageFromFile($plugin, $pluginPath, $version, $sectionTitle, $childPath, $globalOrder);
                         $syncedSlugs[$slug] = true;
                         $result['pages']++;
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
+                        $this->logError('Failed to sync doc page', [
+                            'source' => $plugin->handle,
+                            'version' => $version->label,
+                            'path' => (string) $childPath,
+                            'exception' => $e::class,
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
                         $result['errors'][] = "Failed to sync '{$childPath}' ({$version->label}): {$e->getMessage()}";
                     }
                 }
@@ -186,9 +194,16 @@ class SyncService extends Component
             $version->lastSyncStatus = $result['errors'] === [] ? 'success' : 'error';
             $version->lastSyncError = $result['errors'] === [] ? null : implode("\n", $result['errors']);
             $version->save(false);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $message = "Failed to sync {$version->label}: {$e->getMessage()}";
             $result['errors'][] = $message;
+            $this->logError('Failed to sync docs version', [
+                'source' => $plugin->handle,
+                'version' => $version->label,
+                'exception' => $e::class,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             $version->lastSyncStatus = 'error';
             $version->lastSyncError = $message;
             $version->save(false);
@@ -372,7 +387,7 @@ class SyncService extends Component
             $page->metadata = $parsed['frontmatter'];
         }
 
-        if (!Craft::$app->elements->saveElement($page)) {
+        if (!Craft::$app->elements->saveElement($page, updateSearchIndex: false)) {
             throw new \Exception('Failed to save doc page element: ' . implode(', ', $page->getErrorSummary(true)));
         }
     }
