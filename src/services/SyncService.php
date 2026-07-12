@@ -18,6 +18,7 @@ use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
 use lindemannrock\docsmanager\records\SourceRecord;
 use lindemannrock\docsmanager\records\SourceVersionRecord;
 use lindemannrock\logginglibrary\traits\LoggingTrait;
+use Throwable;
 
 /**
  * Sync Service
@@ -387,9 +388,58 @@ class SyncService extends Component
             $page->metadata = $parsed['frontmatter'];
         }
 
-        if (!Craft::$app->elements->saveElement($page, updateSearchIndex: false)) {
-            throw new \Exception('Failed to save doc page element: ' . implode(', ', $page->getErrorSummary(true)));
+        $this->saveSourceDocElement($page, $plugin, $version, $slug);
+    }
+
+    /**
+     * Save a synced SourceDoc element, retrying the known intermittent Yii Redis
+     * cache-tag invalidation failure that can occur after the element save.
+     *
+     * @throws Throwable
+     */
+    protected function saveSourceDocElement(SourceDoc $page, SourceRecord $plugin, SourceVersionRecord $version, string $slug): void
+    {
+        $maxAttempts = 3;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                if (!Craft::$app->elements->saveElement($page, updateSearchIndex: false)) {
+                    throw new \Exception('Failed to save doc page element: ' . implode(', ', $page->getErrorSummary(true)));
+                }
+
+                return;
+            } catch (Throwable $e) {
+                if (!$this->isRedisTagInvalidationException($e) || $attempt === $maxAttempts) {
+                    throw $e;
+                }
+
+                $this->logWarning('Retrying doc page save after Redis cache-tag invalidation failure', [
+                    'source' => $plugin->handle,
+                    'version' => $version->label,
+                    'slug' => $slug,
+                    'attempt' => $attempt,
+                    'maxAttempts' => $maxAttempts,
+                    'error' => $e->getMessage(),
+                ]);
+
+                usleep(50000 * $attempt);
+            }
         }
+    }
+
+    protected function isRedisTagInvalidationException(Throwable $e): bool
+    {
+        return $this->isRedisTagInvalidationFailure($e->getMessage(), $e->getTraceAsString());
+    }
+
+    protected function isRedisTagInvalidationFailure(string $message, string $trace): bool
+    {
+        if (!preg_match('/^Undefined array key \d+$/', $message)) {
+            return false;
+        }
+
+        return str_contains($trace, 'yii2-redis/src/Cache.php')
+            && str_contains($trace, 'yii\\caching\\TagDependency');
     }
 
     /**
