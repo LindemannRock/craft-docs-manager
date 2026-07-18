@@ -8,8 +8,11 @@
 
 namespace lindemannrock\docsmanager\variables;
 
+use Craft;
 use lindemannrock\base\helpers\SlugHandleHelper;
 use lindemannrock\docsmanager\DocsManager;
+use lindemannrock\docsmanager\elements\db\PluginPageQuery;
+use lindemannrock\docsmanager\elements\db\SourceDocQuery;
 use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\elements\SourceDoc;
 use lindemannrock\docsmanager\helpers\LocalSourcePathHelper;
@@ -25,6 +28,50 @@ use lindemannrock\docsmanager\records\SourceVersionRecord;
  */
 class DocsManagerVariable
 {
+    /**
+     * Returns a new SourceDoc element query.
+     *
+     * Usage:
+     *   {% set docs = craft.docsManager.sourceDocs().all() %}
+     *   {% set hits = craft.docsManager.sourceDocs().search('install').all() %}
+     *
+     * @param array $criteria
+     * @return SourceDocQuery
+     * @since 5.38.0
+     */
+    public function sourceDocs(array $criteria = []): SourceDocQuery
+    {
+        /** @var SourceDocQuery $query */
+        $query = SourceDoc::find();
+
+        if (!empty($criteria)) {
+            Craft::configure($query, $criteria);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Returns a new PluginPage element query.
+     *
+     * Usage: {% set pages = craft.docsManager.pluginPages().all() %}
+     *
+     * @param array $criteria
+     * @return PluginPageQuery
+     * @since 5.38.0
+     */
+    public function pluginPages(array $criteria = []): PluginPageQuery
+    {
+        /** @var PluginPageQuery $query */
+        $query = PluginPage::find();
+
+        if (!empty($criteria)) {
+            Craft::configure($query, $criteria);
+        }
+
+        return $query;
+    }
+
     /**
      * Get all enabled sources, optionally filtered by kind
      *
