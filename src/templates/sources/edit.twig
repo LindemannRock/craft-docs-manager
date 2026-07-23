@@ -110,7 +110,6 @@
 {% if source is defined and source.hasErrors() %}
     {% set errorSummary = include('lindemannrock-base/_partials/error-summary', {
         errors: source.getErrors(),
-        linkMode: 'data-key',
     })|trim %}
 {% endif %}
 
