@@ -104,4 +104,15 @@ final class ParserHeadingsAndAnchorsTest extends TestCase
         $this->assertSame(['level' => 5, 'text' => 'Caveats', 'anchor' => 'caveats'], $headings[3]);
         $this->assertSame(['level' => 6, 'text' => 'Footnote', 'anchor' => 'footnote'], $headings[4]);
     }
+
+    public function testParseMarkdownDecodesHeadingEntitiesForAnchorsAndNavigationText(): void
+    {
+        $result = $this->parser->parseMarkdown('### "Saves aren\'t appearing in search"', null, false);
+
+        $this->assertStringContainsString('id="saves-aren-t-appearing-in-search"', $result['html']);
+        $this->assertSame(
+            ['level' => 3, 'text' => '#"Saves aren\'t appearing in search"', 'anchor' => 'saves-aren-t-appearing-in-search'],
+            $result['headings'][0],
+        );
+    }
 }

@@ -199,7 +199,7 @@ class ParserService extends Component
                 $anchor = $match[2];
                 // Strip since badges from heading text for "On This Page" nav
                 $cleanContent = preg_replace('/<span class="docs-since">[^<]*<\/span>/', '', $match[3]);
-                $text = trim(strip_tags($cleanContent));
+                $text = trim(html_entity_decode(strip_tags($cleanContent), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
                 $headings[] = [
                     'level' => $level,
@@ -257,7 +257,7 @@ class ParserService extends Component
 
                 // Strip since badges entirely before generating anchor ID
                 $cleanContent = preg_replace('/<span class="docs-since">[^<]*<\/span>/', '', $content);
-                $text = trim(strip_tags($cleanContent));
+                $text = trim(html_entity_decode(strip_tags($cleanContent), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
                 $id = $this->generateAnchor($text);
 
                 // Deduplicate: append -2, -3, etc. for repeated headings
