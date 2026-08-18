@@ -72,7 +72,11 @@ return [
 ];
 ```
 
-Changing `syncSchedule` replaces the pending automatic sync queue row so the next run follows the newly selected schedule.
+Docs Manager uses Craft's queue for the recurring schedule. Native and other delay-capable queue backends retain the complete delay to the next wall-clock target. Delay-limited SQS-backed queues use one or more handoff jobs of no more than 900 seconds; a handoff only carries the original absolute target forward and never runs documentation synchronization itself.
+
+The final job still runs at the target calculated by `syncSchedule` in Craft's configured timezone. A normally returned result schedules one successor even when individual sources report errors. If synchronization throws an exception, the queue occurrence fails and no successor is created.
+
+Changing `autoSync` or `syncSchedule` reconciles the complete recurring chain. Enabling automatic sync creates one chain, disabling it removes the chain, and changing the schedule replaces it so the next run follows the newly selected wall-clock target. Unchanged effective settings leave the existing queue row alone. Config-file overrides are included in that decision.
 
 Craft stores queue job descriptions when rows are queued, so date/time format changes apply to newly queued rows. Existing delayed rows keep their old label until they run or are requeued. Queue labels stay compact: numeric months render numerically, while short and long month settings both render as short month names.
 

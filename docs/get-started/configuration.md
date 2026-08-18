@@ -37,6 +37,10 @@ These settings define the defaults applied when adding a new source. Existing so
 | `autoSync` | `bool` | `false` | Enable automatic scheduled sync via the Craft queue |
 | `syncSchedule` | `string` | `'daily'` | Sync frequency when `autoSync` is enabled: `hourly`, `daily`, `weekly`, `monthly` |
 
+Automatic sync follows canonical wall-clock targets in Craft's configured timezone. Craft queue backends that support long delays keep the complete delay. SQS-backed delay-limited queues use transparent handoffs of no more than 900 seconds until the final sync job is due; intermediate handoffs do not sync sources.
+
+Saving an effective schedule change reconciles the recurring queue chain after the settings are persisted. Enabling creates one chain, disabling removes it, changing the schedule replaces it, and an unchanged effective policy causes no queue churn. Values overridden by `config/docs-manager.php` remain authoritative for this comparison.
+
 ## Parser
 
 | Setting | Type | Default | Description |

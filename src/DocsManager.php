@@ -27,19 +27,16 @@ use craft\web\UrlManager;
 use craft\web\View;
 use lindemannrock\base\helpers\ColorHelper;
 use lindemannrock\base\helpers\CpNavHelper;
-use lindemannrock\base\helpers\DateFormatHelper;
 use lindemannrock\base\helpers\PluginHelper;
-use lindemannrock\base\helpers\RecurringQueueHelper;
-use lindemannrock\base\helpers\ScheduleHelper;
 use lindemannrock\docsmanager\elements\PluginPage;
 use lindemannrock\docsmanager\elements\SourceDoc;
-use lindemannrock\docsmanager\jobs\SyncAllPluginsJob;
 use lindemannrock\docsmanager\models\Settings;
 use lindemannrock\docsmanager\services\ChangelogService;
 use lindemannrock\docsmanager\services\CodeExtractorService;
 use lindemannrock\docsmanager\services\DocsGeneratorService;
 use lindemannrock\docsmanager\services\ParserService;
 use lindemannrock\docsmanager\services\ReadmeParserService;
+use lindemannrock\docsmanager\services\ScheduledSyncScheduler;
 use lindemannrock\docsmanager\services\SyncService;
 use lindemannrock\docsmanager\services\VersionService;
 use lindemannrock\docsmanager\variables\DocsManagerVariable;
@@ -63,6 +60,7 @@ use yii\base\Event;
  * @property-read CodeExtractorService $codeExtractor
  * @property-read DocsGeneratorService $docsGenerator
  * @property-read ReadmeParserService $readmeParser
+ * @property-read ScheduledSyncScheduler $scheduledSync
  * @property-read Settings $settings
  * @method Settings getSettings()
  */
@@ -110,6 +108,7 @@ class DocsManager extends BasePlugin
                 'codeExtractor' => CodeExtractorService::class,
                 'docsGenerator' => DocsGeneratorService::class,
                 'readmeParser' => ReadmeParserService::class,
+                'scheduledSync' => ScheduledSyncScheduler::class,
             ],
         ];
     }
@@ -458,35 +457,7 @@ class DocsManager extends BasePlugin
 
     private function scheduleSyncJob(?Settings $settings = null): void
     {
-        $settings ??= $this->getSettings();
-
-        if (!$settings->autoSync) {
-            return;
-        }
-
-        $nextRun = ScheduleHelper::calculateNext($settings->syncSchedule);
-        if ($nextRun === null) {
-            return;
-        }
-
-        $delay = max(0, $nextRun->getTimestamp() - DateFormatHelper::now()->getTimestamp());
-        $nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
-            $nextRun,
-            $settings,
-            null,
-            false,
-            pluginHandle: 'docs-manager',
-        );
-
-        RecurringQueueHelper::ensurePending(
-            pluginToken: 'docsmanager',
-            jobClass: SyncAllPluginsJob::class,
-            delay: $delay,
-            jobFactory: fn() => new SyncAllPluginsJob([
-                'reschedule' => true,
-                'nextRunTime' => $nextRunTime,
-            ]),
-        );
+        $this->scheduledSync->synchronize($settings ?? $this->getSettings());
     }
 
     /**
@@ -496,29 +467,25 @@ class DocsManager extends BasePlugin
      */
     public function handleSyncScheduleChange(Settings $newSettings, bool $oldAutoSync, string $oldSyncSchedule): void
     {
-        if ($oldAutoSync === $newSettings->autoSync && $oldSyncSchedule === $newSettings->syncSchedule) {
+        PluginHelper::applyConfigOverridesToSettings($newSettings, 'docs-manager');
+        $previousSettings = new Settings();
+        $previousSettings->autoSync = $oldAutoSync;
+        $previousSettings->syncSchedule = $oldSyncSchedule;
+        PluginHelper::applyConfigOverridesToSettings($previousSettings, 'docs-manager');
+
+        if (!$this->scheduledSync->replaceIfChanged(
+            $newSettings,
+            $this->scheduledSync->getEffectiveState($previousSettings),
+        )) {
             return;
         }
 
-        $this->cancelScheduledSyncJobs();
-
-        if (!$newSettings->autoSync) {
+        if ($newSettings->autoSync) {
+            $this->logInfo('Automatic docs sync schedule updated', [
+                'schedule' => $newSettings->syncSchedule,
+            ]);
+        } else {
             $this->logInfo('Automatic docs sync disabled');
-            return;
         }
-
-        $this->scheduleSyncJob($newSettings);
-
-        $this->logInfo('Automatic docs sync schedule updated', [
-            'schedule' => $newSettings->syncSchedule,
-        ]);
-    }
-
-    /**
-     * Cancel pending automatic sync jobs.
-     */
-    private function cancelScheduledSyncJobs(): void
-    {
-        RecurringQueueHelper::deletePending('docsmanager', SyncAllPluginsJob::class);
     }
 }

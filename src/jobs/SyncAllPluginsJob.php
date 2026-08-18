@@ -10,8 +10,6 @@ namespace lindemannrock\docsmanager\jobs;
 
 use Craft;
 use craft\queue\BaseJob;
-use lindemannrock\base\helpers\DateFormatHelper;
-use lindemannrock\base\helpers\ScheduleHelper;
 use lindemannrock\base\traits\QueueTtrTrait;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\logginglibrary\traits\LoggingTrait;
@@ -37,6 +35,12 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
     public bool $reschedule = false;
 
     /**
+     * @var string Stable recurring queue owner
+     * @since 5.4.0
+     */
+    public string $recurringOwner = '';
+
+    /**
      * @var string|null Next run time display string
      */
     public ?string $nextRunTime = null;
@@ -57,20 +61,8 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
         parent::init();
         $this->setLoggingHandle('docs-manager');
 
-        if ($this->reschedule && !$this->nextRunTime) {
-            $settings = DocsManager::getInstance()->getSettings();
-            if ($settings->autoSync) {
-                $nextRun = ScheduleHelper::calculateNext($settings->syncSchedule);
-                if ($nextRun !== null) {
-                    $this->nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
-                        $nextRun,
-                        $settings,
-                        null,
-                        false,
-                        pluginHandle: 'docs-manager',
-                    );
-                }
-            }
+        if ($this->reschedule && !$this->nextRunTime && DocsManager::$plugin !== null) {
+            $this->nextRunTime = DocsManager::$plugin->scheduledSync->getNextRunTime();
         }
     }
 
@@ -79,6 +71,11 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
      */
     public function execute($queue): void
     {
+        if ($this->reschedule) {
+            DocsManager::$plugin->scheduledSync->runOccurrence(fn() => $this->syncAndLog());
+            return;
+        }
+
         $settings = DocsManager::getInstance()->getSettings();
 
         // Only run if auto sync is enabled
@@ -86,7 +83,12 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
             return;
         }
 
-        // Sync all enabled plugins
+        $this->syncAndLog();
+    }
+
+    /** Sync every enabled source and retain the existing result accounting. */
+    private function syncAndLog(): void
+    {
         $results = DocsManager::getInstance()->sync->syncAllPlugins();
 
         $totalPlugins = count($results);
@@ -109,11 +111,6 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
             'success' => $successCount,
             'errors' => $errorCount,
         ]);
-
-        // Reschedule if needed
-        if ($this->reschedule) {
-            $this->scheduleNextSync();
-        }
     }
 
     /**
@@ -131,44 +128,5 @@ class SyncAllPluginsJob extends BaseJob implements RetryableJobInterface
         }
 
         return $description;
-    }
-
-    /**
-     * Schedule the next sync based on settings
-     */
-    private function scheduleNextSync(): void
-    {
-        $settings = DocsManager::getInstance()->getSettings();
-
-        // Only reschedule if auto sync is enabled
-        if (!$settings->autoSync) {
-            return;
-        }
-
-        $nextRun = ScheduleHelper::calculateNext($settings->syncSchedule);
-
-        if ($nextRun !== null) {
-            $delay = max(0, $nextRun->getTimestamp() - DateFormatHelper::now()->getTimestamp());
-            $nextRunTime = DateFormatHelper::formatCompactDatetimeFromSettings(
-                $nextRun,
-                $settings,
-                null,
-                false,
-                pluginHandle: 'docs-manager',
-            );
-            // Create a new job for the next sync
-            $job = new self([
-                'reschedule' => true,
-                'nextRunTime' => $nextRunTime,
-            ]);
-
-            Craft::$app->getQueue()->delay($delay)->push($job);
-
-            $this->logInfo('Next sync scheduled', [
-                'delay_seconds' => $delay,
-                'schedule' => $settings->syncSchedule,
-                'next_run' => $nextRunTime,
-            ]);
-        }
     }
 }

@@ -11,6 +11,7 @@ namespace lindemannrock\docsmanager\controllers;
 use Craft;
 use craft\models\FieldLayout;
 use craft\web\Controller;
+use lindemannrock\base\helpers\PluginHelper;
 use lindemannrock\base\helpers\SettingsPostHelper;
 use lindemannrock\docsmanager\DocsManager;
 use lindemannrock\docsmanager\elements\PluginPage;
@@ -214,6 +215,8 @@ class SettingsController extends Controller
 
         if ($settings->saveToDatabase($attributesToValidate)) {
             if (in_array('autoSync', $attributesToValidate, true) || in_array('syncSchedule', $attributesToValidate, true)) {
+                $settings = Settings::loadFromDatabase();
+                PluginHelper::applyConfigOverridesToSettings($settings, 'docs-manager');
                 DocsManager::$plugin->handleSyncScheduleChange($settings, $oldAutoSync, $oldSyncSchedule);
             }
 

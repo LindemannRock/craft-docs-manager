@@ -15,16 +15,20 @@
 
 ## Scheduled Sync Does Not Reappear
 
-Docs Manager schedules one recurring queue job for automatic source sync. If the queue is empty after a scheduled sync runs:
+Docs Manager owns one recurring queue chain for automatic source sync. Depending on the queue backend, Craft's queue UI may show the final scheduled sync job or a deferred handoff carrying that job toward its target. If neither appears after a scheduled sync runs:
 
 - Confirm the queue worker is running.
 - Visit any CP page to let Docs Manager bootstrap the initial job.
 - Check that `autoSync` is enabled.
 - Check that `syncSchedule` is set to `hourly`, `daily`, `weekly`, or `monthly`.
+- Check `config/docs-manager.php` for overrides that disable automatic sync or replace the saved schedule.
+- Review **Docs Manager > Logs** for an observable lock, cancellation, or queue-push failure.
 
 The queued job description shows when that specific queued row is due to run. Craft stores that description when the row is queued, so date/time format changes apply to newly queued rows. Existing delayed rows keep their old label until they run or are requeued. Queue labels stay compact: numeric months render numerically, while short and long month settings both render as short month names.
 
-During bootstrap, Docs Manager collapses duplicate pending automatic-sync rows automatically and keeps one row for the next configured sync run. If duplicates keep returning after a deployment, confirm all web workers are running the same plugin version and old queue workers have been restarted.
+During bootstrap, Docs Manager recognizes its current recurring chain and exact legacy recurring rows, keeps the earliest healthy legacy occurrence when upgrading, and collapses only matching duplicates. Failed legacy rows do not block recovery. Disabling automatic sync removes pending, reserved, and failed recurring consumers and their owned handoffs, while manual all-source jobs, single-source jobs, and unrelated queue work remain separate.
+
+If duplicates keep returning after a deployment, confirm all web and queue workers are running the same plugin version and restart stale workers. Re-save the effective automatic-sync setting only after the workers agree; a changed setting replaces the owned chain, while an unchanged setting intentionally leaves it in place.
 
 ## Settings Save Shows a Validation Error
 
