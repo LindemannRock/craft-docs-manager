@@ -30,6 +30,21 @@ During bootstrap, Docs Manager recognizes its current recurring chain and exact 
 
 If duplicates keep returning after a deployment, confirm all web and queue workers are running the same plugin version and restart stale workers. Re-save the effective automatic-sync setting only after the workers agree; a changed setting replaces the owned chain, while an unchanged setting intentionally leaves it in place.
 
+## Scheduled Sync Reconciliation Is Deferred
+
+You may see one of these warnings when a normal request starts while scheduled-sync queue work is already active:
+
+- `Scheduled-sync bootstrap reconciliation deferred because the lifecycle lock is busy.`
+- `Scheduled-sync bootstrap reconciliation deferred because the portable lock is busy.`
+
+This is expected transient contention, not a failed request. Docs Manager leaves every queue row untouched, allows Craft to finish bootstrapping, and retries reconciliation on a later request.
+
+1. Let the active queue job or settings update finish.
+2. Load another Control Panel or site request to trigger the retry.
+3. If the warning continues after queue activity has stopped, confirm every web and queue worker uses the same plugin version, then restart stale workers and review **Docs Manager > Logs** for a cancellation or queue-push failure.
+
+Settings saves and scheduled occurrences remain strict. A genuine lock, cancellation, synchronization, or queue-push failure in those workflows is still reported as an error instead of being treated as deferred bootstrap work.
+
 ## Settings Save Shows a Validation Error
 
 Numeric settings such as font size and items per page must be whole numbers within the allowed range. If a value is invalid, Docs Manager keeps you on the same settings page and shows the field error inline.

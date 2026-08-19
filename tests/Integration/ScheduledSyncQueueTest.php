@@ -486,17 +486,133 @@ final class ScheduledSyncQueueTest extends TestCase
         self::assertSame(0, $this->countOwnerRows());
     }
 
-    public function testPortableLockFailurePrecedesInspectionAndLeavesRowsUnchanged(): void
+    public function testBootstrapLifecycleContentionIsNonfatalAndLeavesRowsUnchanged(): void
+    {
+        $this->settings()->autoSync = true;
+        $this->pushOwnedJob($this->recurringJob('owned'));
+        $this->insertPayload($this->serializeJob(new SyncAllPluginsJob(['reschedule' => true])), delay: 100);
+        $before = $this->queueFingerprint();
+        $mutex = new SelectiveSyncMutex([ScheduledSyncScheduler::LIFECYCLE_MUTEX]);
+        $originalMutex = Craft::$app->getMutex();
+        $messageOffset = count(Craft::getLogger()->messages);
+        Craft::$app->set('mutex', $mutex);
+
+        try {
+            $this->scheduledSync->synchronize($this->settings());
+        } finally {
+            Craft::$app->set('mutex', $originalMutex);
+        }
+
+        $messages = array_column(array_slice(Craft::getLogger()->messages, $messageOffset), 0);
+        self::assertSame($before, $this->queueFingerprint());
+        self::assertTrue($this->containsMessage(
+            $messages,
+            'Scheduled-sync bootstrap reconciliation deferred because the lifecycle lock is busy.',
+        ));
+        self::assertSame([ScheduledSyncScheduler::LIFECYCLE_MUTEX], $mutex->acquisitions);
+        self::assertSame([0], $mutex->timeouts);
+        self::assertSame([], $mutex->releases);
+    }
+
+    public function testBootstrapPortableContentionIsNonfatalAndLeavesRowsUnchanged(): void
     {
         $payload = $this->serializeJob(new SyncAllPluginsJob(['reschedule' => true]));
-        $ids = [$this->insertPayload($payload, delay: 100), $this->insertPayload($payload, delay: 200)];
+        $this->insertPayload($payload, delay: 100);
+        $this->insertPayload($payload, delay: 200);
+        $before = $this->queueFingerprint();
+        $mutex = new SelectiveSyncMutex([ScheduledSyncScheduler::PORTABLE_MUTEX]);
+        $originalMutex = Craft::$app->getMutex();
+        $messageOffset = count(Craft::getLogger()->messages);
+        Craft::$app->set('mutex', $mutex);
+        $this->settings()->autoSync = true;
+
+        try {
+            $this->scheduledSync->synchronize($this->settings());
+        } finally {
+            Craft::$app->set('mutex', $originalMutex);
+        }
+
+        $messages = array_column(array_slice(Craft::getLogger()->messages, $messageOffset), 0);
+        self::assertSame($before, $this->queueFingerprint());
+        self::assertTrue($this->containsMessage(
+            $messages,
+            'Scheduled-sync bootstrap reconciliation deferred because the portable lock is busy.',
+        ));
+        self::assertSame([
+            ScheduledSyncScheduler::LIFECYCLE_MUTEX,
+            ScheduledSyncScheduler::PORTABLE_MUTEX,
+        ], $mutex->acquisitions);
+        self::assertSame([0, 0], $mutex->timeouts);
+        self::assertSame([ScheduledSyncScheduler::LIFECYCLE_MUTEX], $mutex->releases);
+    }
+
+    public function testLaterBootstrapReconcilesAfterLifecycleContentionClears(): void
+    {
+        $this->settings()->autoSync = true;
+        $originalMutex = Craft::$app->getMutex();
+        Craft::$app->set('mutex', new SelectiveSyncMutex([ScheduledSyncScheduler::LIFECYCLE_MUTEX]));
+
+        try {
+            $this->scheduledSync->synchronize($this->settings());
+            self::assertSame(0, $this->countOwnerRows());
+
+            Craft::$app->set('mutex', new SelectiveSyncMutex([]));
+            $this->scheduledSync->synchronize($this->settings());
+        } finally {
+            Craft::$app->set('mutex', $originalMutex);
+        }
+
+        self::assertSame(1, $this->countOwnerRows());
+    }
+
+    public function testDisabledBootstrapRetriesCancellationAfterContentionClears(): void
+    {
+        $this->pushOwnedJob($this->recurringJob('owned'));
+        $this->settings()->autoSync = false;
+        $originalMutex = Craft::$app->getMutex();
+        Craft::$app->set('mutex', new SelectiveSyncMutex([ScheduledSyncScheduler::PORTABLE_MUTEX]));
+
+        try {
+            $this->scheduledSync->synchronize($this->settings());
+            self::assertSame(1, $this->countOwnerRows());
+
+            Craft::$app->set('mutex', new SelectiveSyncMutex([]));
+            $this->scheduledSync->synchronize($this->settings());
+        } finally {
+            Craft::$app->set('mutex', $originalMutex);
+        }
+
+        self::assertSame(0, $this->countOwnerRows());
+    }
+
+    public function testSettingsLifecycleLockFailureStillPropagates(): void
+    {
+        $mutex = new SelectiveSyncMutex([ScheduledSyncScheduler::LIFECYCLE_MUTEX]);
+        $originalMutex = Craft::$app->getMutex();
+        Craft::$app->set('mutex', $mutex);
+        $this->settings()->autoSync = true;
+
+        try {
+            $this->scheduledSync->replace($this->settings());
+            self::fail('Expected lifecycle mutex failure.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('Unable to acquire the scheduled-sync lifecycle lock.', $exception->getMessage());
+        } finally {
+            Craft::$app->set('mutex', $originalMutex);
+        }
+
+        self::assertSame([5], $mutex->timeouts);
+    }
+
+    public function testSettingsPortableLockFailureStillPropagates(): void
+    {
         $mutex = new SelectiveSyncMutex([ScheduledSyncScheduler::PORTABLE_MUTEX]);
         $originalMutex = Craft::$app->getMutex();
         Craft::$app->set('mutex', $mutex);
         $this->settings()->autoSync = true;
 
         try {
-            $this->scheduledSync->synchronize($this->settings());
+            $this->scheduledSync->replace($this->settings());
             self::fail('Expected portable mutex failure.');
         } catch (\RuntimeException $exception) {
             self::assertSame('Unable to acquire the portable scheduled-sync queue lock.', $exception->getMessage());
@@ -504,11 +620,7 @@ final class ScheduledSyncQueueTest extends TestCase
             Craft::$app->set('mutex', $originalMutex);
         }
 
-        self::assertSame($ids, $this->legacyRowIds());
-        self::assertSame([
-            ScheduledSyncScheduler::LIFECYCLE_MUTEX,
-            ScheduledSyncScheduler::PORTABLE_MUTEX,
-        ], $mutex->acquisitions);
+        self::assertSame([5, 5], $mutex->timeouts);
         self::assertSame([ScheduledSyncScheduler::LIFECYCLE_MUTEX], $mutex->releases);
     }
 
@@ -661,20 +773,9 @@ final class ScheduledSyncQueueTest extends TestCase
         self::assertSame(0, $this->countOwnerRows());
     }
 
-    public function testLifecycleAndPushFailuresRemainObservable(): void
+    public function testSettingsPushFailureStillPropagates(): void
     {
-        $originalMutex = Craft::$app->getMutex();
-        Craft::$app->set('mutex', new SelectiveSyncMutex([ScheduledSyncScheduler::LIFECYCLE_MUTEX]));
         $this->settings()->autoSync = true;
-        try {
-            $this->scheduledSync->synchronize($this->settings());
-            self::fail('Expected lifecycle mutex failure.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('Unable to acquire the scheduled-sync lifecycle lock.', $exception->getMessage());
-        } finally {
-            Craft::$app->set('mutex', $originalMutex);
-        }
-
         $this->installPortableQueue(true);
         self::assertNotNull($this->proxyQueue);
         $this->proxyQueue->failPushes = true;
@@ -705,6 +806,41 @@ final class ScheduledSyncQueueTest extends TestCase
         }
 
         self::assertSame(1, $this->countOwnerRows());
+    }
+
+    public function testBootstrapCancellationFailureAfterLockAcquisitionPropagates(): void
+    {
+        $this->pushOwnedJob($this->recurringJob('owned'));
+        $db = Craft::$app->getDb();
+        $originalCommandClass = $db->commandClass;
+        $db->commandClass = FailingQueueDeleteCommand::class;
+        $this->settings()->autoSync = false;
+
+        try {
+            $this->scheduledSync->synchronize($this->settings());
+            self::fail('Expected queue cancellation failure.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('Scheduled sync cancellation failure.', $exception->getMessage());
+        } finally {
+            $db->commandClass = $originalCommandClass;
+        }
+
+        self::assertSame(1, $this->countOwnerRows());
+    }
+
+    public function testBootstrapPushFailureAfterLockAcquisitionPropagates(): void
+    {
+        $this->installPortableQueue(true);
+        self::assertNotNull($this->proxyQueue);
+        $this->proxyQueue->failPushes = true;
+        $this->settings()->autoSync = true;
+
+        try {
+            $this->scheduledSync->synchronize($this->settings());
+            self::fail('Expected proxy push failure.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('Scheduled sync proxy failure.', $exception->getMessage());
+        }
     }
 
     public function testRuntimeHasNoProviderDependencyOrPrivateInfrastructureInspection(): void
@@ -788,6 +924,21 @@ final class ScheduledSyncQueueTest extends TestCase
             ->where(['like', 'job', ScheduledSyncScheduler::PLUGIN_TOKEN])
             ->andWhere(['like', 'job', 'SyncAllPluginsJob'])
             ->andWhere(['like', 'job', ScheduledSyncScheduler::RECURRING_OWNER]);
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function queueFingerprint(): array
+    {
+        $rows = (new Query())
+            ->from('{{%queue}}')
+            ->orderBy(['id' => SORT_ASC])
+            ->all();
+
+        return array_map(static function(array $row): array {
+            $row['job'] = hash('sha256', (string)$row['job']);
+
+            return $row;
+        }, $rows);
     }
 
     /** @return list<int> */
@@ -932,6 +1083,8 @@ final class SelectiveSyncMutex extends Mutex
 {
     /** @var list<string> */
     public array $acquisitions = [];
+    /** @var list<int> */
+    public array $timeouts = [];
     /** @var list<string> */
     public array $releases = [];
 
@@ -947,6 +1100,7 @@ final class SelectiveSyncMutex extends Mutex
     protected function acquireLock($name, $timeout = 0): bool
     {
         $this->acquisitions[] = (string)$name;
+        $this->timeouts[] = (int)$timeout;
         if ($name === ScheduledSyncScheduler::PORTABLE_MUTEX && $this->portableTimestamp !== null) {
             DateTimeHelper::resume();
             DateTimeHelper::pause(new \DateTime('@' . $this->portableTimestamp));

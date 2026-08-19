@@ -35,6 +35,7 @@ final class ScheduledSyncScheduler extends Component
     public const PORTABLE_MUTEX = 'docs-manager:sync:portable';
 
     private const MUTEX_TIMEOUT = 5;
+    private const BOOTSTRAP_MUTEX_TIMEOUT = 0;
 
     /** Synchronize the recurring family during plugin bootstrap. */
     public function synchronize(?Settings $settings = null): void
@@ -42,7 +43,7 @@ final class ScheduledSyncScheduler extends Component
         $settings ??= DocsManager::$plugin->getSettings();
         $nextRun = $this->getNextRun($settings);
 
-        $this->withQueueMutationLocks(
+        $this->withBootstrapQueueMutationLocks(
             fn() => $nextRun === null
                 ? $this->cancelLocked()
                 : $this->queueAtLocked($settings, $nextRun, true),
@@ -395,5 +396,40 @@ final class ScheduledSyncScheduler extends Component
     private function withQueueMutationLocks(callable $callback): mixed
     {
         return $this->withLifecycleLock(fn() => $this->withPortableLock($callback));
+    }
+
+    /** Attempt bootstrap reconciliation without blocking normal request processing. */
+    private function withBootstrapQueueMutationLocks(callable $callback): bool
+    {
+        $mutex = Craft::$app->getMutex();
+        if (!$mutex->acquire(self::LIFECYCLE_MUTEX, self::BOOTSTRAP_MUTEX_TIMEOUT)) {
+            Craft::warning(
+                'Scheduled-sync bootstrap reconciliation deferred because the lifecycle lock is busy.',
+                'docs-manager',
+            );
+
+            return false;
+        }
+
+        try {
+            if (!$mutex->acquire(self::PORTABLE_MUTEX, self::BOOTSTRAP_MUTEX_TIMEOUT)) {
+                Craft::warning(
+                    'Scheduled-sync bootstrap reconciliation deferred because the portable lock is busy.',
+                    'docs-manager',
+                );
+
+                return false;
+            }
+
+            try {
+                $callback();
+
+                return true;
+            } finally {
+                $mutex->release(self::PORTABLE_MUTEX);
+            }
+        } finally {
+            $mutex->release(self::LIFECYCLE_MUTEX);
+        }
     }
 }
